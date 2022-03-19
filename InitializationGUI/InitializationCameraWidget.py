@@ -41,6 +41,10 @@ class InitializationCameraWidget(BaseCameraWidget):
 
 
     def show_moveable_rects(self):
+        """
+        依据cfg中的既有Rect ROI 产生可移动rect
+        :return:
+        """
         self.movableRects = []
         windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
         ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
