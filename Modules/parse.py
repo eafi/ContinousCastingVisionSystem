@@ -123,10 +123,15 @@ def parse_roi_rect(obj):
 def write_couple_cfg(couple: tuple, path='CONF.cfg'):
     """
     向path文件写入一对新的cfg键值对
+    :param couple: 必须是一对, 且必须是str
     :param path:
     :return:
     """
     key, newVal = couple
+    if not isinstance(key, str) or not isinstance(newVal, str):
+        errorstr = 'Write to configuration value \'couple\' should be str tuple.'
+        LOG(type=log_types.WARN, str=errorstr)
+        raise TypeError(str)
     if key == '':
         return
     if not path.endswith(('.cfg') or not os.path.exists(path)):
@@ -137,7 +142,8 @@ def write_couple_cfg(couple: tuple, path='CONF.cfg'):
     with open(path, 'r') as fr:
         with open('cfg.sw', 'w') as fw:
             for line in fr:
-                if key not in line:
+                keyLine = line.split('=')
+                if key not in keyLine:
                     fw.write(line)
                 else:
                     fw.write(key+'='+newVal+'\n')

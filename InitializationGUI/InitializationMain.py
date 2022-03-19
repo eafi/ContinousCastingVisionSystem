@@ -49,8 +49,9 @@ class MainGUI(QWidget):
         self.show()
 
     def clickedBinding(self):
-        self.distanceVOF = DistanceVOFCheck(self.cfgManager.cfg)
-        self.btn1.clicked.connect(self.distanceVOF.show)
+        #self.distanceVOF = DistanceVOFCheck(self.cfgManager.cfg)
+        self.btn1.clicked.connect(self.leftCamera.slot_draw_mininum_rects)
+        self.btn1.clicked.connect(self.rightCamera.slot_draw_mininum_rects)
 
 
 if __name__ == '__main__':

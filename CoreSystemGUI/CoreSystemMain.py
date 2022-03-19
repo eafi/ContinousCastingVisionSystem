@@ -5,6 +5,7 @@ from Modules.system import *
 from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 
 
+
 class MainGUI(QObject):
     def __init__(self, path='CONF.cfg'):
         super().__init__()

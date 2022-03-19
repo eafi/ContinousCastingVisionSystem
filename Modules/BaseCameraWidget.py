@@ -28,7 +28,6 @@ class BaseCameraWidget(QWidget):
             self.im_np = self.camera.capture()
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
-                self.resize(self.w, self.h)
                 self.cameraStatusSignal.emit('OK')
                 if not self.paintTimer.isActive():
                     self.paintTimer.start(self.fps)
@@ -59,7 +58,6 @@ class BaseCameraWidget(QWidget):
         self.paintTimer = QTimer()
         self.statuTimer.start(self.fps)
         self.paintTimer.start(self.fps)
-        #self.resize(self.w, self.h)
 
         self.paintTimer.timeout.connect(self.update)  # 定时更新画面
         self.statuTimer.timeout.connect(self.status)  # 定时汇报模组状态
@@ -75,6 +73,7 @@ class BaseCameraWidget(QWidget):
             self.im_np = self.camera.capture()
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
+                self.resize(self.w, self.h)
             #self.camera = fakeCamera.Camera()  # 调试用
             LOG(log_types.OK, self.tr(self.cameraType+': Camera Init OK.'))
         except genicam.RuntimeException as e:
@@ -86,13 +85,21 @@ class BaseCameraWidget(QWidget):
 
 
     def paintEvent(self, event):
+        """
+        实时更新相机视窗的Windows Width, Height， 以及与image的 ratio.
+        :param event:
+        :return:
+        """
         if self.camera is not None and self.im_np is not None:
             painter = QPainter()
             painter.begin(self)
             tmp_img = cv2.cvtColor(self.im_np, cv2.COLOR_GRAY2RGB) # 如果直接使用灰度，Qtpainter无法绘制
             qimage = QImage(tmp_img.data, self.w, self.h, 3*self.w, QImage.Format_RGB888)
-            windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
-            painter.drawImage(QRectF(0, 0, windowW, windowH), qimage, QRectF(0, 0, self.w, self.h))
+            self.windowW, self.windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
+            self.ratioW = self.windowW / self.w  # 窗口 / 像素 <= 1.0
+            self.ratioH = self.windowH / self.h
+            painter.drawImage(QRectF(0, 0, self.windowW, self.windowH),
+                              qimage, QRectF(0, 0, self.w, self.h))
             painter.end()
 
 

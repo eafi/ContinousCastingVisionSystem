@@ -34,14 +34,12 @@ class CoreSystemCameraWidget(BaseCameraWidget):
                 pen.setColor(Qt.red)
                 pen.setWidth(2)
                 painter.setPen(pen)
-                ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
-                ratioH = windowH / self.h
                 for key in self.cfg['ROIs_Conf']:
                     if self.cameraType in key:
                         rect = self.cfg['ROIs_Conf'][key]
-                        rect = rect[0]*ratioW, rect[1]*ratioH, rect[2]*ratioW, rect[3]*ratioH
+                        rect = rect[0]*self.ratioW, rect[1]*self.ratioH, rect[2]*self.ratioW, rect[3]*self.ratioH
                         painter.drawRect(*rect)
-                        painter.drawText(QPointF(rect[0]*ratioW, rect[1]*ratioW), self.tr(key))
+                        painter.drawText(QPointF(rect[0]*self.ratioW, rect[1]*self.ratioW), self.tr(key))
 
             # 绘制Target区域
             if self.isDrawTargets and self.rect is not None:
