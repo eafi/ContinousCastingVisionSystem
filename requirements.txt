@@ -1,0 +1,8 @@
+pypylon==1.7.2
+torch==1.9.0
+numpy==1.21.2
+opencv_python==4.5.3.56
+Cython==0.29.25
+matplotlib==3.5.0
+Pillow==9.0.1
+PyQt5==5.15.6

@@ -1,0 +1,13 @@
+[Log_Conf]
+LogDir=./Dir/New/dsfs/sdgtert
+LogType=image,video,text
+LogClr=r
+
+[Status_Conf]
+LeftCamera=CameraStatusSignal
+RightCamera=CameraStatusSignal
+
+[WarnColor_Conf]
+Break=r
+OK=g
+
