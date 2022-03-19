@@ -11,15 +11,15 @@ Email: imeafi@gmail.com
 3. 多个ROIs覆盖在视窗中，对VOF进行了确定
 """
 
-from PyQt5.QtWidgets import QWidget
-from CoreSystemGUI.CameraPanle.CameraWidget import CameraWidget
+from PyQt5.QtWidgets import QWidget, QHBoxLayout
 
 class DistanceVOFCheck(QWidget):
-    def __init__(self):
+    def __init__(self, cfg):
         super(DistanceVOFCheck, self).__init__()
+        self.cfg = cfg
         self.initUI()
 
 
     def initUI(self):
-        self.cameraWidget = CameraWidget()
+        pass
 

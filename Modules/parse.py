@@ -18,7 +18,7 @@ class CfgManager(QObject):
         Signal_Map['CfgUpdateSignal'] = self.cfgUpdateSignal
         self.cfgUpdateSignal.connect(self.cfgUpdateSlot)
 
-    def cfgUpdateSlot(self, path='CONF.cfg'):
+    def cfgUpdateSlot(self, path='../CONF.cfg'):
         """
         刷新CFG文件
         :return:
