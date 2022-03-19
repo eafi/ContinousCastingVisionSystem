@@ -72,6 +72,9 @@ class BaseCameraWidget(QWidget):
         """
         try:
             self.camera = camera.Camera()
+            self.im_np = self.camera.capture()
+            if self.im_np is not None:
+                self.h, self.w = self.im_np.shape
             #self.camera = fakeCamera.Camera()  # 调试用
             LOG(log_types.OK, self.tr(self.cameraType+': Camera Init OK.'))
         except genicam.RuntimeException as e:

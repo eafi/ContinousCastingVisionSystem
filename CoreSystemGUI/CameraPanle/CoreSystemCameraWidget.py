@@ -12,26 +12,8 @@ class CoreSystemCameraWidget(BaseCameraWidget):
 
     def __init__(self, cameraType, cfg):
         super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType)
-        self.isDrawTargets = True
-        self.isDrawROIs = True
         self.cfg = cfg
-        self.im_np = None
         self.rect = None  # 用于绘制Target
-        self.init()
-
-
-    def init(self):
-        """
-        初始化相机相关资源:
-        0. 读取CFG文件，将ROI rect信息读入
-        1. 相机画面刷新定时器, 并开启绘图定时
-        2. 相机状态反馈定时器，并开启状态定时反馈
-        3. 尝试获得一帧图像，从而判断相机系统是否可用，并设定CameraWidget的宽度和高度到该尺寸
-        4. 是否绘制ROIs控制变量 = False
-        5. 是否绘制Targets变量 = False
-        :return:
-        """
-        super(CoreSystemCameraWidget, self).init()
         # 是否绘制ROIs
         self.isDrawROIs = False
         # 是否绘制Targets
