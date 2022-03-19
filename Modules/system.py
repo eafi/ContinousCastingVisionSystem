@@ -1,5 +1,4 @@
 from Modules.parse import *
-from Global_Val import Signal_Map
 from Modules.LOG import *
 from Modules.detect1 import Detection1
 from Modules.Detection_1.utils.PnP import *
@@ -15,15 +14,12 @@ class CoreSystem(QObject):
         self.DETECT_STAGE1_CONSTRAINED = []  # Stage1 可能会使用两个ROIs检测窗进行综合检测
         self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
-        self.cfgUpdateSlot()  # 更新/初始化系统配置文件
 
         self.initCoreResources()
 
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
         self.cfgManager = CfgManager()
-        Signal_Map['CfgUpdateSignal'] = self.cfgManager.cfgUpdateSignal
-        self.cfgManager.cfgUpdateSignal.connect(self.cfgUpdateSlot)
 
 
     def initCoreResources(self):
@@ -103,7 +99,7 @@ class CoreSystem(QObject):
             if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
                 roisMap = sender.get_roiImages()
                 for key in roisMap:
-                    tmpThread = Detection1(self.cfg, description=key, img=roisMap[key])
+                    tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
                     tmpThread.returnValSignal.connect(self.threads_return_slot)
                     self.detectThread.append(tmpThread)
                     tmpThread.start()

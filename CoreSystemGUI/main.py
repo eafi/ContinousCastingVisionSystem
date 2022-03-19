@@ -9,7 +9,7 @@ class MainGUI(QObject):
     def __init__(self, path='CONF.cfg'):
         super().__init__()
         self.core = CoreSystem()
-        self.cfg = self.core.cfg
+        self.cfg = self.core.cfgManager.cfg
         self.initUI()
 
 

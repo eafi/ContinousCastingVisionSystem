@@ -8,9 +8,15 @@ Email: imeafi@gmail.com
 import os
 from Modules.LOG import *
 from PyQt5.QtCore import QObject, pyqtSignal
+from Global_Val import Signal_Map
 
 class CfgManager(QObject):
     cfgUpdateSignal = pyqtSignal()
+    def __init__(self):
+        super(CfgManager, self).__init__()
+        self.cfgUpdateSlot()  # 更新/初始化系统配置文件
+        Signal_Map['CfgUpdateSignal'] = self.cfgUpdateSignal
+        self.cfgUpdateSignal.connect(self.cfgUpdateSlot)
 
     def cfgUpdateSlot(self, path='CONF.cfg'):
         """
