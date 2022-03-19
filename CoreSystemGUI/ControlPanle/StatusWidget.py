@@ -6,7 +6,7 @@ Email: imeafi@gmail.com
 StatusWidget is used for showing the system status.
 """
 
-from PyQt5.QtWidgets import QWidget, QLabel, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QHBoxLayout
 from PyQt5.QtGui import QPixmap, QImage
 import numpy as np
 from Modules.LOG import *
@@ -23,16 +23,19 @@ class StatusWidget(QWidget):
     def __init__(self, cfg):
         super(StatusWidget, self).__init__()
         self.cfg = cfg
-        self.leftCameraStatusLabel = aStatusLabel(cfg=cfg, description='LeftCamera', status='Break')
+        self.leftCameraStatusLabel = aStatusLabel(cfg=cfg, description='LeftCamera', status='Break') # 在coresystemmain.py 中绑定
         self.rightCameraStatusLabel = aStatusLabel(cfg=cfg, description='RightCamera', status='Break')
+        self.cudaStatusLabel = aStatusLabel(cfg=cfg, description='CUDA', status='Break')
         self.initUI()
 
 
     def initUI(self):
-        hboxlayout = QHBoxLayout()
-        hboxlayout.addWidget(self.leftCameraStatusLabel)
-        hboxlayout.addWidget(self.rightCameraStatusLabel)
-        self.setLayout(hboxlayout)
+        layout = QGridLayout()
+        layout.addWidget(self.leftCameraStatusLabel, 0, 0)
+        layout.addWidget(self.rightCameraStatusLabel, 0, 1)
+        layout.addWidget(self.cudaStatusLabel, 1, 0)
+
+        self.setLayout(layout)
 
 
 

@@ -15,7 +15,9 @@ class CoreSystem(QObject):
         self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
 
-        self.initCoreResources()
+        self.detectThread = []
+        import torch
+        self.cuda_available = torch.cuda.is_available()
 
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
@@ -23,13 +25,12 @@ class CoreSystem(QObject):
         self.cfg = self.cfgManager.cfg
 
 
-    def initCoreResources(self):
+    def core_resources_check(self):
         """各种组建资源初始化
         1. 左右相机资源初始化
-        ??? 2. 检测线程初始化
         :return:
         """
-        self.detectThread = []
+        pass
 
 
 
