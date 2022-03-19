@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from CoreSystemGUI.ControlPanle.ControlPanleWidget import ControlPanleWidget
 from Modules.system import *
-from CoreSystemGUI.CameraPanle.CameraWidget import CameraWidget
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 
 
 class MainGUI(QObject):
@@ -15,8 +15,8 @@ class MainGUI(QObject):
 
     def initUI(self):
 
-        self.leftCameraWidget = CameraWidget(cfg=self.cfg, cameraType=self.tr('LeftCamera'))
-        self.rightCameraWidget = CameraWidget(cfg=self.cfg, cameraType=self.tr('RightCamera'))
+        self.leftCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('LeftCamera'))
+        self.rightCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('RightCamera'))
         # ControlPanle实例化
         self.controlPanle = ControlPanleWidget(cfg=self.cfg)
 

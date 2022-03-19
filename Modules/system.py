@@ -19,7 +19,7 @@ class CoreSystem(QObject):
 
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
-        self.cfgManager = CfgManager()
+        self.cfgManager = CfgManager(path='CONF.cfg')
 
 
     def initCoreResources(self):

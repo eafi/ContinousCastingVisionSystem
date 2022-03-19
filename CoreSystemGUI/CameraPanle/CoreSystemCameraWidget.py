@@ -1,0 +1,128 @@
+# TODO: 相机的采样频率与处理的采样频率相等.
+import cv2
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import QTimer, QRectF, pyqtSignal, Qt, QPointF
+from PyQt5.QtGui import QImage, QPainter, QPen, QPolygonF
+from Modules import camera, fakeCamera
+from Modules.LOG import *
+from pypylon import genicam
+import numpy as np
+from Modules.BaseCameraWidget import BaseCameraWidget
+class CoreSystemCameraWidget(BaseCameraWidget):
+
+    def __init__(self, cameraType, cfg):
+        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType)
+        self.isDrawTargets = True
+        self.isDrawROIs = True
+        self.cfg = cfg
+        self.im_np = None
+        self.rect = None  # 用于绘制Target
+        self.init()
+
+
+    def init(self):
+        """
+        初始化相机相关资源:
+        0. 读取CFG文件，将ROI rect信息读入
+        1. 相机画面刷新定时器, 并开启绘图定时
+        2. 相机状态反馈定时器，并开启状态定时反馈
+        3. 尝试获得一帧图像，从而判断相机系统是否可用，并设定CameraWidget的宽度和高度到该尺寸
+        4. 是否绘制ROIs控制变量 = False
+        5. 是否绘制Targets变量 = False
+        :return:
+        """
+        super(CoreSystemCameraWidget, self).init()
+        # 是否绘制ROIs
+        self.isDrawROIs = False
+        # 是否绘制Targets
+        self.isDrawTargets = False
+
+
+    def paintEvent(self, event):
+        super(CoreSystemCameraWidget, self).paintEvent(event=event)  # 绘制基本Camera图像
+        # ========================================================================================== #
+        # 绘制派生类的定制图像
+        if self.camera is not None and self.im_np is not None:
+            painter = QPainter()
+            painter.begin(self)
+            oldPen = painter.pen()
+            windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
+            if self.isDrawROIs:
+                pen = QPen()
+                pen.setColor(Qt.red)
+                pen.setWidth(2)
+                painter.setPen(pen)
+                ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
+                ratioH = windowH / self.h
+                for key in self.cfg['ROIs_Conf']:
+                    if self.cameraType in key:
+                        rect = self.cfg['ROIs_Conf'][key]
+                        rect = rect[0]*ratioW, rect[1]*ratioH, rect[2]*ratioW, rect[3]*ratioH
+                        painter.drawRect(*rect)
+                        painter.drawText(QPointF(rect[0]*ratioW, rect[1]*ratioW), self.tr(key))
+
+            # 绘制Target区域
+            if self.isDrawTargets and self.rect is not None:
+                pen = QPen()
+                pen.setColor(Qt.green)
+                painter.setPen(pen)
+                painter.drawPolyline(QPolygonF(map(lambda p: QPointF(*p), self.rect)))
+
+            painter.setPen(oldPen)
+            painter.end()
+
+
+    def toggle_rois(self, state):
+        """
+        勾选： 是否绘制ROI
+        :param state:
+        :return:
+        """
+        if state == Qt.Checked:
+            self.isDrawROIs = True
+        else:
+            self.isDrawROIs = False
+
+
+
+    def found_targets_slot(self, whichCamerawhichROI: str, rect: np.ndarray):
+        if self.cameraType in whichCamerawhichROI and rect.size != 0:
+            self.rect = rect
+
+
+    def toggle_targets(self, state):
+        """
+        勾选： 是否绘制Target
+        :param state:
+        :return:
+        """
+        if state == Qt.Checked:
+            self.isDrawTargets = True
+        else:
+            self.isDrawTargets = False
+
+    def get_roiImages(self):
+        """
+        获得受到ROI控制的局部图像，由于可能存在多个ROI区域，返回列别
+        :return: map of region of interests, e.g. 'LeftCameraLeftRoi' : [.., .., .., ..]
+        """
+        roiImages = {}
+        for key in self.cfg['ROIs_Conf']:
+            roi = self.cfg['ROIs_Conf'][key]
+            roiImages[key] = (self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]])
+        return roiImages
+
+    def get_a_roiImage(self, whichCamerawhichROI: str):
+        """
+        选取特定的ROI区域
+        :return:
+        """
+        roi = self.cfg['ROIs_Conf'][whichCamerawhichROI]
+        return self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
+
+
+
+
+
+
+

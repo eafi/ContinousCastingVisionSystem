@@ -12,18 +12,19 @@ from Global_Val import Signal_Map
 
 class CfgManager(QObject):
     cfgUpdateSignal = pyqtSignal()
-    def __init__(self):
+    def __init__(self, path):
         super(CfgManager, self).__init__()
+        self.path = path
         self.cfgUpdateSlot()  # 更新/初始化系统配置文件
         Signal_Map['CfgUpdateSignal'] = self.cfgUpdateSignal
         self.cfgUpdateSignal.connect(self.cfgUpdateSlot)
 
-    def cfgUpdateSlot(self, path='../CONF.cfg'):
+    def cfgUpdateSlot(self):
         """
         刷新CFG文件
         :return:
         """
-        self.cfg = parse_cfg(path)
+        self.cfg = parse_cfg(self.path)
         parse_resources_cfg(self)
         parse_stage_rois(self)
         parse_target_ref(self)

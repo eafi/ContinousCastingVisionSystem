@@ -8,19 +8,14 @@ from Modules.LOG import *
 from pypylon import genicam
 import numpy as np
 from collections import deque
-class CameraWidget(QWidget):
+class BaseCameraWidget(QWidget):
     cameraStatusSignal = pyqtSignal(str)
 
-
-    def __init__(self, cfg, cameraType):
-        super(CameraWidget, self).__init__()
-        self.isDrawTargets = True
-        self.isDrawROIs = True
-        self.cfg = cfg
+    def __init__(self, cameraType):
+        super(BaseCameraWidget, self).__init__()
         self.im_np = None
         self.fps = 33
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
-        self.rect = None  # 用于绘制Target
         self.init()
 
 
@@ -69,11 +64,6 @@ class CameraWidget(QWidget):
         self.paintTimer.timeout.connect(self.update)  # 定时更新画面
         self.statuTimer.timeout.connect(self.status)  # 定时汇报模组状态
 
-        # 是否绘制ROIs
-        self.isDrawROIs = False
-        # 是否绘制Targets
-        self.isDrawTargets = False
-
 
     def try_init_camera(self):
         """
@@ -100,80 +90,7 @@ class CameraWidget(QWidget):
             qimage = QImage(tmp_img.data, self.w, self.h, 3*self.w, QImage.Format_RGB888)
             windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
             painter.drawImage(QRectF(0, 0, windowW, windowH), qimage, QRectF(0, 0, self.w, self.h))
-            # 绘制ROI区域
-            oldPen = painter.pen()
-            if self.isDrawROIs:
-                pen = QPen()
-                pen.setColor(Qt.red)
-                pen.setWidth(2)
-                painter.setPen(pen)
-                ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
-                ratioH = windowH / self.h
-                for key in self.cfg['ROIs_Conf']:
-                    if self.cameraType in key:
-                        rect = self.cfg['ROIs_Conf'][key]
-                        rect = rect[0]*ratioW, rect[1]*ratioH, rect[2]*ratioW, rect[3]*ratioH
-                        painter.drawRect(*rect)
-                        painter.drawText(QPointF(rect[0]*ratioW, rect[1]*ratioW), self.tr(key))
-
-            # 绘制Target区域
-            if self.isDrawTargets and self.rect is not None:
-                pen = QPen()
-                pen.setColor(Qt.green)
-                painter.setPen(pen)
-                painter.drawPolyline(QPolygonF(map(lambda p: QPointF(*p), self.rect)))
-
-            painter.setPen(oldPen)
             painter.end()
-
-
-    def toggle_rois(self, state):
-        """
-        勾选： 是否绘制ROI
-        :param state:
-        :return:
-        """
-        if state == Qt.Checked:
-            self.isDrawROIs = True
-        else:
-            self.isDrawROIs = False
-
-
-
-    def found_targets_slot(self, whichCamerawhichROI: str, rect: np.ndarray):
-        if self.cameraType in whichCamerawhichROI and rect.size != 0:
-            self.rect = rect
-
-
-    def toggle_targets(self, state):
-        """
-        勾选： 是否绘制Target
-        :param state:
-        :return:
-        """
-        if state == Qt.Checked:
-            self.isDrawTargets = True
-        else:
-            self.isDrawTargets = False
-
-    def get_roiImages(self):
-        """
-        获得受到ROI控制的局部图像，由于可能存在多个ROI区域，返回列别
-        :return: map of region of interests, e.g. 'LeftCameraLeftRoi' : [.., .., .., ..]
-        """
-        roiImages = {}
-        for key in self.cfg['ROIs_Conf']:
-            roi = self.cfg['ROIs_Conf'][key]
-            roiImages[key] = (self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]])
-        return roiImages
-
-    def get_a_roiImage(self, whichCamerawhichROI: str):
-        """
-        选取特定的ROI区域
-        :return:
-        """
-        roi = self.cfg['ROIs_Conf'][whichCamerawhichROI]
-        return self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
 
 
 

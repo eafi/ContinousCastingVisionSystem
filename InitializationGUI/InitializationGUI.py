@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVB
 from PyQt5.QtCore import QObject
 from distanceVofCheck import DistanceVOFCheck
 from Modules.parse import CfgManager
-from CoreSystemGUI.CameraPanle.CameraWidget import CameraWidget
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CameraWidget
 
 
 class MainGUI(QWidget):

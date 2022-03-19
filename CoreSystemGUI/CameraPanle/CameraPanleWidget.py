@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget
-from CoreSystemGUI.CameraPanle.CameraWidget import CameraWidget
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CameraWidget
 from PyQt5.QtWidgets import QHBoxLayout
 
 class CameraPanleWidget(QWidget):
