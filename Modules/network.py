@@ -11,7 +11,7 @@ from collections import namedtuple
 PORT = 6669
 
 class AbstractMsg(QObject):
-    newCmdSignal = pyqtSignal(int, list)
+    #newCmdSignal = pyqtSignal(int, list)
     def __init__(self):
         super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)
@@ -23,12 +23,16 @@ class AbstractMsg(QObject):
             data = list(struct.unpack(self.format_, data))
             self.recCtlBits, self.recData = data[0], data[1:]
             print('[Info] Recv:', self.recCtlBits, self.recData)
-            self.newCmdSignal.emit(self.msgManager.recCtlBits, self.msgManager.recData)
+            #self.newCmdSignal.emit(self.msgManager.recCtlBits, self.msgManager.recData)
             # 向绑定用户发送控制字符以及数据，然后接受缓存
-            self.recv_clear()
+            return data
 
 
     def pack(self, ctl, data):
+        if data is None:
+            data = 9 * [np.float32(0.0)]
+        if ctl is None:
+            ctl = np.uint32(0)
         if not self.empty():
             try:
                 DATA = namedtuple("DATA", "uCtl fData0 fData1 fData2 fData3 fData4 fData5 fData6 fData7 fData8")
@@ -83,7 +87,7 @@ class Network(QThread):
             print('wait to be connected.')
             LOG(log_types.OK, self.tr(f'Network connected with {addr}.'))
 
-    def send(self, ctl, pos):
+    def send(self, ctl, pos=None):
         try:
             msg_to_send = self.msgManager.pack(ctl, pos)
             self.conn.sendall(msg_to_send)
@@ -97,7 +101,7 @@ class Network(QThread):
             data = self.conn.recv(40)
         except BlockingIOError as e:
             data = None
-        self.msgManager.parse(data)
+        return self.msgManager.parse(data)
 
 
 

@@ -16,8 +16,8 @@ class ROBOT_CTL_BITS:
     ok = 0
 
     # Request Command
-    request_enable_move = 2
-    request_robot_pos = 3
+    request_move = 2
+    request_robot_state = 3
 
     # Get Command
     get_system_state = 4
@@ -47,15 +47,8 @@ class Robot(QObject):
         :param pos:
         :return:
         """
-        self.network.msgManager.
-
-
-    def is_movable(self):
-        """
-        询问机器人是否可动
-        :return:
-        """
-        raise NotImplementedError
+        ctl = ROBOT_CTL_BITS.request_move
+        self.network.send(ctl, pos)
 
 
     def check_robot_states(self):
@@ -63,8 +56,9 @@ class Robot(QObject):
         询问机器人状态
         :return:
         """
-        raise NotImplementedError
+        ctl = ROBOT_CTL_BITS.request_robot_state
+        self.network.send(ctl)
+        # 阻塞，等待传回机器人的姿态或者状态
+        res, pos = self.network.recv()
 
 
-if __name__ == '__main__':
-    r = Robot()

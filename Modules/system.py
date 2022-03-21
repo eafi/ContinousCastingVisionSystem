@@ -19,7 +19,7 @@ class CoreSystem(QObject):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在main.py绑定
     def __init__(self):
         super(CoreSystem, self).__init__()
-        self.DETECT_STAGE = 1  # 系统检测宏观状态
+        self.DETECT_STAGE = 0  # 系统检测宏观状态
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.DETECT_STAGE1_CONSTRAINED = []  # Stage1 可能会使用两个ROIs检测窗进行综合检测
         self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
