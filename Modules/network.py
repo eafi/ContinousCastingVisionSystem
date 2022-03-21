@@ -33,7 +33,7 @@ class AbstractMsg(QObject):
             data = 9 * [np.float32(0.0)]
         if ctl is None:
             ctl = np.uint32(0)
-        if not self.empty():
+        if not data == 9 * [np.float32(0)] and not ctl == np.uint32(0):
             try:
                 DATA = namedtuple("DATA", "uCtl fData0 fData1 fData2 fData3 fData4 fData5 fData6 fData7 fData8")
                 msg_to_send = DATA(uCtl=ctl,
@@ -53,9 +53,6 @@ class AbstractMsg(QObject):
                 print(e)
 
 
-    def empty(self):
-        return True if self.sendCtlBits == np.uint32(0) and self.sendData == 9 * [np.float32(0)] else False
-
 
     def set_send_data(self, ctlBit, data):
         self.sendCtlBits = ctlBit
@@ -71,8 +68,8 @@ class AbstractMsg(QObject):
         self.recCtlBits = 9 * [np.float32(0)]
 
 
-# TODO: 增加命令解析class解析RecvData指令。 从而控制Coresystem观察并运算哪一个ROI?
 class Network(QThread):
+    robotCommunicationSignal = pyqtSignal(str)
     def __init__(self, ip='localhost', port=PORT):
         super(Network, self).__init__()
         self.ip = ip
@@ -80,18 +77,29 @@ class Network(QThread):
         # 解析报文内容
         self.msgManager = AbstractMsg()
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.ip, self.port))
-            s.listen(1)
-            self.conn, addr = s.accept()  # 阻塞，等待链接
-            print('wait to be connected.')
-            LOG(log_types.OK, self.tr(f'Network connected with {addr}.'))
+    #TODO: 替换成seletct，当前网络代码没办法保证客户端断掉的检查
+    def run(self):
+        while True:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(5)
+                    s.bind((self.ip, self.port))
+                    s.listen(1)
+                    self.conn, addr = s.accept()  # 阻塞，等待链接
+                    LOG(log_types.OK, self.tr(f'Network connected with {addr}.'))
+                    self.robotCommunicationSignal.emit('OK')
+                while True:
+                    pass
+            except Exception as e:
+                self.robotCommunicationSignal.emit('Break')
+                print('client is break!')
 
-    def send(self, ctl, pos=None):
+
+    def send(self, ctl, data=None):
         try:
-            msg_to_send = self.msgManager.pack(ctl, pos)
+            msg_to_send = self.msgManager.pack(ctl, data)
             self.conn.sendall(msg_to_send)
-            print('[Info] Sent:', self.sendCtlBits, self.sendData)
+            print('[Info] Sent:', ctl, )
         except Exception as e:
             print(e)
 

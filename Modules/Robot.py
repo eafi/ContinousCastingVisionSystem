@@ -10,6 +10,7 @@ Robot文件提供了对机械臂的概念抽象，提供：
 """
 from PyQt5.QtCore import QObject
 from Modules.network import Network
+from Modules.LOG import *
 
 class ROBOT_CTL_BITS:
     error = 1
@@ -25,23 +26,24 @@ class ROBOT_CTL_BITS:
 
 
 class Robot(QObject):
-    def __init__(self):
+    def __init__(self, ip, port):
         super(Robot, self).__init__()
-        self.robot_init()
+        self.init(ip, port)
 
-    def robot_init(self):
+    def init(self, ip, port):
         """
         初始化机器人资源，尝试与PLC通讯
         :return:
         """
         try:
-            self.network = Network(ip='localhost', port=6667)
-            #self.network.start()
+            self.network = Network(ip=ip, port=port)
+            self.network.start()
         except Exception as e:
+            LOG(log_types.FAIL, self.tr('Network init failed.'))
             print(e)
 
 
-    def move_2_pos(self, pos):
+    def move(self, pos):
         """
         机器人运动到目标位置
         :param pos:
@@ -61,4 +63,12 @@ class Robot(QObject):
         # 阻塞，等待传回机器人的姿态或者状态
         res, pos = self.network.recv()
 
+    def say_ok(self):
+        ctl = ROBOT_CTL_BITS.ok
+        self.network.send(ctl)
+
+
+    def say_error(self):
+        ctl = ROBOT_CTL_BITS.error
+        self.network.send(ctl)
 

@@ -12,35 +12,70 @@ from Modules.parse import *
 from Modules.LOG import *
 from Modules.detect1 import Detection1
 from Modules.Detection_1.utils.PnP import *
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QThread, QMutex
 from Modules.TargetObj import TargetObj
+from Modules.Robot import Robot
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
+from time import sleep
 
-class CoreSystem(QObject):
-    targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在main.py绑定
+class CoreSystem(QThread):
+    targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
+    resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定
     def __init__(self):
         super(CoreSystem, self).__init__()
-        self.DETECT_STAGE = 0  # 系统检测宏观状态
+        # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
+        # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
+        self.DETECT_STAGE = -1  # 系统检测宏观状态
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.DETECT_STAGE1_CONSTRAINED = []  # Stage1 可能会使用两个ROIs检测窗进行综合检测
         self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
 
-        self.detectThread = []
-        import torch
-        self.cuda_available = torch.cuda.is_available()
 
-        # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
-        # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
-        self.cfgManager = CfgManager(path='CONF.cfg')
-        self.cfg = self.cfgManager.cfg
+
+    def run(self):
+        """
+        CoreSystem主执行循环，用于与Robot交互，并根据Robot请求进行状态转移.
+        :return:
+        """
+        while True:
+            LOG(log_types.NOTICE, self.tr(f'SYSTEM MODEL: {self.DETECT_STAGE}'))
+            if self.DETECT_STAGE == -1:
+                try:
+                    # =================================#
+                    # 关键资源分配，失败时将不断重新尝试初始化 #
+                    # =================================#
+                    self.core_resources_check()  # 资源分配
+                    self.DETECT_STAGE = 0  # 成功，进行自动状态转移
+                    self.resourceInitOKSignal.emit()
+                except Exception as e:
+                    LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
+            elif self.DETECT_STAGE == 0:  # 初始化成功状态，正在1000ms发送OK
+                # 转移状态
+                sleep(1)
+                # 资源分配成功，向机器人发送OK指令
+                #self.robot.say_ok()
+                print('[Info] System init good.')
+            elif self.DETECT_STAGE == 1:
+                print('[Info] System: ', self.DETECT_STAGE)
+
 
 
     def core_resources_check(self):
-        """各种组建资源初始化
-        1. 左右相机资源初始化
+        """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
         :return:
         """
-        pass
+        # 读取CFG文件夹
+        self.cfgManager = CfgManager(path='CONF.cfg')
+        self.cfg = self.cfgManager.cfg
+        # CUDA状态
+        import torch
+        self.cuda_available = torch.cuda.is_available()  # Status状态：cuda
+        self.detectThread = []
+       # # 机器人通讯资源
+        self.robot = Robot(self.cfg['Robot_Conf']['IP'], int(self.cfg['Robot_Conf']['PORT']))
+
+
 
 
     def threads_check(self, threads, maxNum):
