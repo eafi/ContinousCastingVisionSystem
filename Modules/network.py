@@ -5,7 +5,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.Qt import QThread, QApplication
 import socket
 import numpy as np
-from LOG import *
+from Modules.LOG import *
 import struct
 from collections import namedtuple
 
@@ -13,6 +13,7 @@ from collections import namedtuple
 class AbstractMsg(QObject):
     newCmdRecSignle = pyqtSignal(int, str)
     def __init__(self):
+        super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)
         self.recData = 9 * [np.float32(0.0)]
         self.sendCtlBits = np.uint32(0)
@@ -28,7 +29,7 @@ class AbstractMsg(QObject):
             print(data)
             data = list(struct.unpack(self.format_, data))
             self.recCtlBits, self.recData = data[0], data[1:]
-            print('data:', self.recCtlBits, self.recData)
+            print('[Info] Recv:', self.recCtlBits, self.recData)
             # 向绑定用户发送控制字符以及数据，然后接受缓存
             self.newCmdRecSignle.emit(self.recCtlBits, self.recData)
             self.recv_clear()
@@ -50,6 +51,7 @@ class AbstractMsg(QObject):
                                    fData8=self.sendData[8])
                 msg_to_send = struct.pack(self.format_, *msg_to_send._asdict().values())
                 socket.sendall(msg_to_send)
+                print('[Info] Sent:', self.sendCtlBits, self.sendData)
                 self.send_clear()
             except Exception as e:
                 pass
@@ -58,6 +60,12 @@ class AbstractMsg(QObject):
 
     def empty(self):
         return True if self.sendCtlBits == np.uint32(0) and self.sendData == 9 * [np.float32(0)] else False
+
+
+    def set_send_data(self, ctlBit, data):
+        self.sendCtlBits = ctlBit
+        self.sendData = data
+
 
     def recv_clear(self):
         """
@@ -78,14 +86,17 @@ class AbstractMsg(QObject):
 
 # TODO: 增加命令解析class解析RecvData指令。 从而控制Coresystem观察并运算哪一个ROI?
 class Network(QThread):
-    def __init__(self):
+    def __init__(self, ip='localhost', port=6667):
         super(Network, self).__init__()
+        self.ip = ip
+        self.port = port
+        # 发送、接受报文以及解析报文内容
         self.msgManager = AbstractMsg()
 
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('localhost', 6667))
+            s.bind((self.ip, self.port))
             s.listen(1)
             conn, addr = s.accept()  # 阻塞，等待链接
             print('wait to be connected.')

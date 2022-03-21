@@ -14,7 +14,8 @@ from Modules.network import Network
 class Robot(QObject):
     def __init__(self):
         super(Robot, self).__init__()
-        pass
+        self.network = Network(ip='localhost', port=6667)
+        self.network.start()
 
 
     def move_2_pos(self, pos):
