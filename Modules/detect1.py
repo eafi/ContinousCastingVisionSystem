@@ -69,4 +69,4 @@ class Detection1(QThread):
         # 真正检查图像逻辑
         if rect.size != 0:
             rect = search(src_img=self.img, **self.kargs)
-        self.returnValSignal.emit(self.descriotion, rect)  # 向CoreSystem发送检测结果，在CoreSystem.py-detect()中绑定
+        self.returnValSignal.emit(self.descriotion, rect)  # 向CoreSystem发送检测结果，在system.py-detect()中绑定

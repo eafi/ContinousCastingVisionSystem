@@ -8,51 +8,42 @@ import numpy as np
 from Modules.LOG import *
 import struct
 from collections import namedtuple
-
+PORT = 6669
 
 class AbstractMsg(QObject):
-    newCmdRecSignle = pyqtSignal(int, str)
+    newCmdSignal = pyqtSignal(int, list)
     def __init__(self):
         super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)
         self.recData = 9 * [np.float32(0.0)]
-        self.sendCtlBits = np.uint32(0)
-        self.sendData = 9 * [np.float32(0.0)]
         self.format_ = "I9f"
 
-    def recv(self, conn):
-        try:
-            data = conn.recv(40, 0x40)
-        except BlockingIOError as e:
-            data = None
+    def parse(self, data):
         if data and len(data) == 40:
-            print(data)
             data = list(struct.unpack(self.format_, data))
             self.recCtlBits, self.recData = data[0], data[1:]
             print('[Info] Recv:', self.recCtlBits, self.recData)
+            self.newCmdSignal.emit(self.msgManager.recCtlBits, self.msgManager.recData)
             # 向绑定用户发送控制字符以及数据，然后接受缓存
-            self.newCmdRecSignle.emit(self.recCtlBits, self.recData)
             self.recv_clear()
 
 
-    def send(self, socket):
+    def pack(self, ctl, data):
         if not self.empty():
             try:
                 DATA = namedtuple("DATA", "uCtl fData0 fData1 fData2 fData3 fData4 fData5 fData6 fData7 fData8")
-                msg_to_send = DATA(uCtl=self.sendCtlBits,
-                                   fData0=self.sendData[0],
-                                   fData1=self.sendData[1],
-                                   fData2=self.sendData[2],
-                                   fData3=self.sendData[3],
-                                   fData4=self.sendData[4],
-                                   fData5=self.sendData[5],
-                                   fData6=self.sendData[6],
-                                   fData7=self.sendData[7],
-                                   fData8=self.sendData[8])
+                msg_to_send = DATA(uCtl=ctl,
+                                   fData0=data[0],
+                                   fData1=data[1],
+                                   fData2=data[2],
+                                   fData3=data[3],
+                                   fData4=data[4],
+                                   fData5=data[5],
+                                   fData6=data[6],
+                                   fData7=data[7],
+                                   fData8=data[8])
                 msg_to_send = struct.pack(self.format_, *msg_to_send._asdict().values())
-                socket.sendall(msg_to_send)
-                print('[Info] Sent:', self.sendCtlBits, self.sendData)
-                self.send_clear()
+                return msg_to_send
             except Exception as e:
                 pass
                 print(e)
@@ -75,41 +66,42 @@ class AbstractMsg(QObject):
         self.recCtlBits = np.uint32(0)
         self.recCtlBits = 9 * [np.float32(0)]
 
-    def send_clear(self):
-        """
-        成功发送后需要清空发送内容
-        :return:
-        """
-        self.sendCtlBits = np.uint32(0)
-        self.sendData = 9 * [np.float32(0)]
-
 
 # TODO: 增加命令解析class解析RecvData指令。 从而控制Coresystem观察并运算哪一个ROI?
 class Network(QThread):
-    def __init__(self, ip='localhost', port=6667):
+    def __init__(self, ip='localhost', port=PORT):
         super(Network, self).__init__()
         self.ip = ip
         self.port = port
-        # 发送、接受报文以及解析报文内容
+        # 解析报文内容
         self.msgManager = AbstractMsg()
 
-
-    def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.ip, self.port))
             s.listen(1)
-            conn, addr = s.accept()  # 阻塞，等待链接
+            self.conn, addr = s.accept()  # 阻塞，等待链接
             print('wait to be connected.')
             LOG(log_types.OK, self.tr(f'Network connected with {addr}.'))
-            with conn:
-                while True:
-                    self.msgManager.recv(conn)
-                    self.msgManager.send(conn)
+
+    def send(self, ctl, pos):
+        try:
+            msg_to_send = self.msgManager.pack(ctl, pos)
+            self.conn.sendall(msg_to_send)
+            print('[Info] Sent:', self.sendCtlBits, self.sendData)
+        except Exception as e:
+            print(e)
+
+
+    def recv(self):
+        try:
+            data = self.conn.recv(40)
+        except BlockingIOError as e:
+            data = None
+        self.msgManager.parse(data)
 
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     net = Network()
-    net.start()
     sys.exit(app.exec())

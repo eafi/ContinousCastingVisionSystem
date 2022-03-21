@@ -11,11 +11,34 @@ Robot文件提供了对机械臂的概念抽象，提供：
 from PyQt5.QtCore import QObject
 from Modules.network import Network
 
+class ROBOT_CTL_BITS:
+    error = 1
+    ok = 0
+
+    # Request Command
+    request_enable_move = 2
+    request_robot_pos = 3
+
+    # Get Command
+    get_system_state = 4
+
+
+
 class Robot(QObject):
     def __init__(self):
         super(Robot, self).__init__()
-        self.network = Network(ip='localhost', port=6667)
-        self.network.start()
+        self.robot_init()
+
+    def robot_init(self):
+        """
+        初始化机器人资源，尝试与PLC通讯
+        :return:
+        """
+        try:
+            self.network = Network(ip='localhost', port=6667)
+            #self.network.start()
+        except Exception as e:
+            print(e)
 
 
     def move_2_pos(self, pos):
@@ -24,7 +47,7 @@ class Robot(QObject):
         :param pos:
         :return:
         """
-        raise NotImplementedError
+        self.network.msgManager.
 
 
     def is_movable(self):
@@ -41,3 +64,7 @@ class Robot(QObject):
         :return:
         """
         raise NotImplementedError
+
+
+if __name__ == '__main__':
+    r = Robot()
