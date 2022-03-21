@@ -1,3 +1,10 @@
+"""
+============
+Author: Yifei Zhang
+Email: imeafi@gmail.com
+
+detect1.py文件提供了Detection_1方法的Qt封装，以Qthread的形式向CoreSystem提供核心检测方法支持
+"""
 from PyQt5.QtCore import QThread, pyqtSignal
 from Modules.LOG import *
 from Modules.Detection_1.search import search
@@ -62,4 +69,4 @@ class Detection1(QThread):
         # 真正检查图像逻辑
         if rect.size != 0:
             rect = search(src_img=self.img, **self.kargs)
-        self.returnValSignal.emit(self.descriotion, rect)
+        self.returnValSignal.emit(self.descriotion, rect)  # 向CoreSystem发送检测结果，在CoreSystem.py-detect()中绑定

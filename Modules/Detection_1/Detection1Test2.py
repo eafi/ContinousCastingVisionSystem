@@ -20,7 +20,6 @@ class gui(QMainWindow):
     def callProgram(self):
         # run the process
         # `start` takes the exec and a list of arguments
-        #TODO: 将所有本项目拷贝一个备份，试一试创建多个子进程对性能的影响.
         #for i in range(10):
         img = np.random.rand(500,500)
         import pickle

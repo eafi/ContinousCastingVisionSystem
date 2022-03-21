@@ -94,7 +94,7 @@ class BaseCameraWidget(QWidget):
             painter = QPainter()
             painter.begin(self)
             tmp_img = cv2.cvtColor(self.im_np, cv2.COLOR_GRAY2RGB) # 如果直接使用灰度，Qtpainter无法绘制
-            qimage = QImage(tmp_img.recData, self.w, self.h, 3 * self.w, QImage.Format_RGB888)
+            qimage = QImage(tmp_img.data, self.w, self.h, 3 * self.w, QImage.Format_RGB888)
             self.windowW, self.windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
             self.ratioW = self.windowW / self.w  # 窗口 / 像素 <= 1.0
             self.ratioH = self.windowH / self.h

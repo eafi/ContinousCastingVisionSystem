@@ -1,3 +1,13 @@
+"""
+===========
+Author: Yifei Zhang
+Email: imeafi@gmail.com
+
+system.py是CoreSystem的执行主要backend文件，提供：
+1. detection stage状态转移
+2. detection方法资源调度和分配
+3. detection结果处理以及解析成Target坐标
+"""
 from Modules.parse import *
 from Modules.LOG import *
 from Modules.detect1 import Detection1
@@ -32,18 +42,6 @@ class CoreSystem(QObject):
         """
         pass
 
-
-
-    #def cfgUpdateSlot(self, path='CONF.cfg'):
-    #    """
-    #    刷新CFG文件
-    #    :return:
-    #    """
-    #    self.cfg = parse_cfg(path)
-    #    parse_resources_cfg(self)
-    #    parse_stage_rois(self)
-    #    parse_target_ref(self)
-    #    parse_roi_rect(self)  # 读取ROI rect信息
 
     def threads_check(self, threads, maxNum):
         """
