@@ -19,19 +19,8 @@ class Robot(QObject):
         self.cfg = cfg
         self.ip = cfg['Network_Conf']['IP']
         self.port = cfg['Network_Conf']['PORT']
-        self.init(self.ip, self.port)
-
-    def init(self, ip, port):
-        """
-        初始化机器人资源，尝试与PLC通讯
-        :return:
-        """
-        try:
-            self.network = Network(ip=ip, port=port)
-            self.network.start()
-        except Exception as e:
-            LOG(log_types.FAIL, self.tr('Network init failed.'))
-            print(e)
+        self.network = Network(ip=self.ip, port=self.port)
+        self.network.start()
 
 
     def move(self, pos):
@@ -52,7 +41,7 @@ class Robot(QObject):
         ctl = self.cfg['Network_Conf']['NetworkRequestRobotState']
         self.network.send(ctl)
         # 阻塞，等待传回机器人的姿态或者状态
-        res, pos = self.network.recv()
+        #res, pos = self.network.recv()
 
     def say_ok(self):
         ctl = self.cfg['Network_Conf']['NetworkOK']
@@ -63,3 +52,18 @@ class Robot(QObject):
         ctl = self.cfg['Network_Conf']['NetworkError']
         self.network.send(ctl)
 
+
+    def slot_new_cmd(self, state):
+        print('sdfsddfgdfg', state)
+
+
+
+#if __name__ == '__main__':
+#    from PyQt5.QtWidgets import QApplication
+#    import sys
+#    app = QApplication(sys.argv)
+#    cfg = {
+#        'Network_Conf' : {'IP':'127.0.0.1', 'PORT':6666}
+#    }
+#    r = Robot(cfg)
+#    sys.exit(app.exec())

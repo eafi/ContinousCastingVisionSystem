@@ -29,6 +29,7 @@ class CfgManager(QObject):
         parse_stage_rois(self)
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
+        parse_network(self)
 
 
 def parse_cfg(path: str):
@@ -98,7 +99,7 @@ def parse_stage_rois(obj):
 
 def parse_target_ref(obj):
     """
-    解析CFG文件： 每一个标定板在抓取目标坐标系下的物理偏移
+    解析CFG文件： 每一个标定板与目标刚体的转换矩阵
     :param obj: 包含了self.obj的对象
     :return:
     """
@@ -131,10 +132,10 @@ def parse_network(obj):
     Network_map = obj.cfg['Network_Conf']
 
     for key in Network_map:
-        if key is 'PORT':
-            obj.cfg['Network_Conf'][key] = int(obj.cfg['Robot_Conf']['PORT'])
-        elif key is not 'IP':
-            obj.cfg['Network_Conf'][key] = int(obj.cfg['Robot_Conf'][key], 16)
+        if key == 'PORT':
+            obj.cfg['Network_Conf'][key] = int(obj.cfg['Network_Conf']['PORT'])
+        elif key != 'IP':
+            obj.cfg['Network_Conf'][key] = int(obj.cfg['Network_Conf'][key], 16)
 
 
 

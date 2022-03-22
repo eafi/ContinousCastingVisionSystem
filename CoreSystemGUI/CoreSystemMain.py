@@ -31,8 +31,8 @@ class MainGUI(QObject):
         self.core.robot.network.robotCommunicationStatusSignal.connect(self.controlPanle.statusWidget.robotStatusLabel.clrChange)
 
         ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
-        #self.leftCameraWidget.cameraStatusSignal.connect(self.core.detect)
-        #self.rightCameraWidget.cameraStatusSignal.connect(self.core.detect)
+        self.leftCameraWidget.cameraStatusSignal.connect(self.core.detect)
+        self.rightCameraWidget.cameraStatusSignal.connect(self.core.detect)
 
         # ControlPanle - BUTTON WIDGET 按键绑定
         self.controlPanle.buttonWidget.button_visCamera1.clicked.connect(self.leftCameraWidget.show)  # 相机按钮绑定

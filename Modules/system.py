@@ -20,7 +20,7 @@ from time import sleep
 
 class CoreSystem(QThread):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
-    resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定
+    resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定:当资源分配成功后才能启动GUI
     def __init__(self):
         super(CoreSystem, self).__init__()
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
@@ -30,6 +30,7 @@ class CoreSystem(QThread):
         self.DETECT_STAGE1_CONSTRAINED = []  # Stage1 可能会使用两个ROIs检测窗进行综合检测
         self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
+        self.isDetecting = False
 
 
 
@@ -39,7 +40,6 @@ class CoreSystem(QThread):
         :return:
         """
         while True:
-            LOG(log_types.NOTICE, self.tr(f'SYSTEM MODEL: {self.DETECT_STAGE}'))
             if self.DETECT_STAGE == -1:
                 try:
                     # =================================#
@@ -48,15 +48,12 @@ class CoreSystem(QThread):
                     self.core_resources_check()  # 资源分配
                     self.DETECT_STAGE = 0  # 成功，进行自动状态转移
                     self.resourceInitOKSignal.emit()
+                    print('[Info] System init good.')
                 except Exception as e:
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
-            elif self.DETECT_STAGE == 0:  # 初始化成功状态，正在1000ms发送OK
-                # 转移状态
-                sleep(1)
-                # 资源分配成功，向机器人发送OK指令
-                #self.robot.say_ok()
-                #TODO: 在该循环不断进行detect，但只依据Robot的具体请求返回特定ROI的计算结果,
-                print('[Info] System init good.')
+            elif self.DETECT_STAGE == 0:  # 初始化成功状态，等待TCP链接，但同时已经开始计算图像
+                ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
+                self.isDetecting = True
             elif self.DETECT_STAGE == 1:
                 print('[Info] System: ', self.DETECT_STAGE)
 
@@ -75,6 +72,12 @@ class CoreSystem(QThread):
         self.detectThread = []
        # # 机器人通讯资源
         self.robot = Robot(self.cfg)
+        self.robot.network.msgManager.NetworkCmdSignal.connect(self.cmds_handler)
+
+
+    def cmds_handler(self, ctl, data):
+        pass
+
 
 
 
@@ -131,7 +134,7 @@ class CoreSystem(QThread):
         """
         sender = self.sender()  # one of CameraWidget
         # 确定系统所处阶段
-        if state == 'OK':
+        if self.isDetecting and state == 'OK':
             if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
                 roisMap = sender.get_roiImages()
                 for key in roisMap:

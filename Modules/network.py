@@ -9,13 +9,14 @@ import numpy as np
 from Modules.LOG import *
 import struct
 from collections import namedtuple
-PORT = 6674
+PORT = 6669
 import queue
 
 
 
 class AbstractMsg(QObject):
-    #newCmdSignal = pyqtSignal(int, list)
+    # 向绑定用户发送控制字符以及数据，然后接受缓存
+    NetworkCmdSignal = pyqtSignal(int, list)  # 在Robot.py中绑定,用于告知机器人状态
     def __init__(self):
         super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)
@@ -23,17 +24,12 @@ class AbstractMsg(QObject):
         self.format_ = "I9f"
 
 
-    def recv(self, bitData):
-        self.recCtlBits, self.recData = self.parse(bitData)
-
     def parse(self, data):
         if data and len(data) == 40:
             data = list(struct.unpack(self.format_, data))
             self.recCtlBits, self.recData = data[0], data[1:]
             print('[Info] Recv:', self.recCtlBits, self.recData)
-            #self.newCmdSignal.emit(self.msgManager.recCtlBits, self.msgManager.recData)
-            # 向绑定用户发送控制字符以及数据，然后接受缓存
-            return data
+            self.NetworkCmdSignal.emit(self.recCtlBits, self.recData)
 
 
     def pack(self, ctl, data):
@@ -61,12 +57,6 @@ class AbstractMsg(QObject):
                 print(e)
 
 
-
-    def set_send_data(self, ctlBit, data):
-        self.sendCtlBits = ctlBit
-        self.sendData = data
-
-
     def recv_clear(self):
         """
         成功接收后需要清空接收内容（在确定接受信号的对象接受到信号之后）
@@ -88,7 +78,6 @@ class Network(QThread):
         self.connectSocket = None
 
     def run(self):
-        try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
                 server.setblocking(0)  # 非阻塞套接字
                 server.bind((self.ip, self.port))
@@ -98,8 +87,7 @@ class Network(QThread):
                 self.message_queues = {}
                 while inputs:
                     print('wating for the next event')
-                    readable, writable, exceptional = select.select(inputs, self.outputs, inputs, 5)
-                    self.robotCommunicationStatusSignal.emit('OK')
+                    readable, writable, exceptional = select.select(inputs, self.outputs, inputs, 1)
                     for s in readable:
                         if s is server:
                             connection, client_address = s.accept()
@@ -108,7 +96,7 @@ class Network(QThread):
                             inputs.append(connection)  # 同时监听这个新的套接子
                             self.message_queues[connection] = queue.Queue()
                             self.connectSocket = s
-
+                            self.robotCommunicationStatusSignal.emit('OK')
                         else:
                             # 其他可读客户端连接
                             data = s.recv(40)
@@ -118,8 +106,7 @@ class Network(QThread):
                                     data, s.getpeername()), file=sys.stderr)
                                 #message_queues[s].put(data)
                                 # 解析新来的数据，并保存到msgManager中
-                                #self.msgManager.recv(data)
-                                self.connectSocket = s
+                                self.msgManager.parse(data)
                                 #if s not in outputs:
                                 #    outputs.append(s)
                             else: # 没有数据
@@ -150,17 +137,17 @@ class Network(QThread):
 
                         del self.message_queues[s]
 
-        except Exception as e:
-            self.robotCommunicationStatusSignal.emit('Break')
-            print('client is break!', e.args[0])
 
 
     def send(self, ctl, data=None):
         try:
-            msg_to_send = self.msgManager.pack(ctl, data)
-            self.outputs.append(self.connectSocket)
-            self.message_queues[self.connectSocket].put(msg_to_send)
-            print('[Info] Sent:', ctl, data)
+            if self.connectSocket is not None:
+                msg_to_send = self.msgManager.pack(ctl, data)
+                self.outputs.append(self.connectSocket)
+                self.message_queues[self.connectSocket].put(msg_to_send)
+                print('[Info] Sent:', ctl, data)
+            else:
+                LOG(log_types.WARN, self.tr('No connection yet.'))
         except Exception as e:
             print(e)
 
