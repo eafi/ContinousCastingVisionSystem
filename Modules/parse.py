@@ -6,6 +6,9 @@ Email: imeafi@gmail.com
 对CONF.conf文件进行解码
 """
 import os
+
+import numpy as np
+
 from Modules.LOG import *
 from PyQt5.QtCore import QObject, pyqtSignal
 from Global_Val import Signal_Map
@@ -104,8 +107,16 @@ def parse_target_ref(obj):
     :return:
     """
     assert 'TargetRef2Rect_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
+    from scipy.spatial.transform import Rotation as R
     for key in obj.cfg['TargetRef2Rect_Conf']:
         obj.cfg['TargetRef2Rect_Conf'][key] = [float(x) for x in obj.cfg['TargetRef2Rect_Conf'][key].split(',')]
+        eular = R.from_euler('xyz', [obj.cfg['TargetRef2Rect_Conf'][key][-3:]])
+        trans = np.array(obj.cfg['TargetRef2Rect_Conf'][key][:3])
+        m = np.zeros((4,4))
+        m[:3,:3] = eular.as_matrix()
+        m[:3, 3] = trans
+        m[3,3] = 1.0
+        obj.cfg['TargetRef2Rect_Conf'][key] = m
 
 
 
