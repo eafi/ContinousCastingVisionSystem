@@ -28,7 +28,7 @@ class MainGUI(QObject):
         self.leftCameraWidget.cameraStatusSignal.connect(self.controlPanle.statusWidget.leftCameraStatusLabel.clrChange)
         self.rightCameraWidget.cameraStatusSignal.connect(self.controlPanle.statusWidget.rightCameraStatusLabel.clrChange)
         self.controlPanle.statusWidget.cudaStatusLabel.clrChange('OK' if self.core.cuda_available else 'Break')
-        self.core.robot.network.robotCommunicationSignal.connect(self.controlPanle.statusWidget.robotStatusLabel.clrChange)
+        self.core.robot.network.robotCommunicationStatusSignal.connect(self.controlPanle.statusWidget.robotStatusLabel.clrChange)
 
         ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
         #self.leftCameraWidget.cameraStatusSignal.connect(self.core.detect)

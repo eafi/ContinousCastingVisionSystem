@@ -12,23 +12,14 @@ from PyQt5.QtCore import QObject
 from Modules.network import Network
 from Modules.LOG import *
 
-class ROBOT_CTL_BITS:
-    error = 1
-    ok = 0
-
-    # Request Command
-    request_move = 2
-    request_robot_state = 3
-
-    # Get Command
-    get_system_state = 4
-
-
 
 class Robot(QObject):
-    def __init__(self, ip, port):
+    def __init__(self, cfg):
         super(Robot, self).__init__()
-        self.init(ip, port)
+        self.cfg = cfg
+        self.ip = cfg['Network_Conf']['IP']
+        self.port = cfg['Network_Conf']['PORT']
+        self.init(self.ip, self.port)
 
     def init(self, ip, port):
         """
@@ -49,7 +40,7 @@ class Robot(QObject):
         :param pos:
         :return:
         """
-        ctl = ROBOT_CTL_BITS.request_move
+        ctl = self.cfg['Network_Conf']['NetworkRequestMove']
         self.network.send(ctl, pos)
 
 
@@ -58,17 +49,17 @@ class Robot(QObject):
         询问机器人状态
         :return:
         """
-        ctl = ROBOT_CTL_BITS.request_robot_state
+        ctl = self.cfg['Network_Conf']['NetworkRequestRobotState']
         self.network.send(ctl)
         # 阻塞，等待传回机器人的姿态或者状态
         res, pos = self.network.recv()
 
     def say_ok(self):
-        ctl = ROBOT_CTL_BITS.ok
+        ctl = self.cfg['Network_Conf']['NetworkOK']
         self.network.send(ctl)
 
 
     def say_error(self):
-        ctl = ROBOT_CTL_BITS.error
+        ctl = self.cfg['Network_Conf']['NetworkError']
         self.network.send(ctl)
 

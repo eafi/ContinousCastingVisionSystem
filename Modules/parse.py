@@ -104,7 +104,8 @@ def parse_target_ref(obj):
     """
     assert 'TargetRef2Rect_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
     for key in obj.cfg['TargetRef2Rect_Conf']:
-        obj.cfg['TargetRef2Rect_Conf'][key] = [int(x) for x in obj.cfg['TargetRef2Rect_Conf'][key].split(',')]
+        obj.cfg['TargetRef2Rect_Conf'][key] = [float(x) for x in obj.cfg['TargetRef2Rect_Conf'][key].split(',')]
+
 
 
 def parse_roi_rect(obj):
@@ -118,6 +119,24 @@ def parse_roi_rect(obj):
     ROIs_map = obj.cfg['ROIs_Conf']
     for key in ROIs_map:
         obj.cfg['ROIs_Conf'][key] = [int(x) for x in ROIs_map[key].split(',')]
+
+
+def parse_network(obj):
+    """
+    解析CFG文件： 对Network配置进行解析
+    :param obj:
+    :return:
+    """
+    assert 'Network_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Network configuration miss.'))
+    Network_map = obj.cfg['Network_Conf']
+
+    for key in Network_map:
+        if key is 'PORT':
+            obj.cfg['Network_Conf'][key] = int(obj.cfg['Robot_Conf']['PORT'])
+        elif key is not 'IP':
+            obj.cfg['Network_Conf'][key] = int(obj.cfg['Robot_Conf'][key], 16)
+
+
 
 
 def write_couple_cfg(couple: tuple, path='CONF.cfg'):

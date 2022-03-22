@@ -55,6 +55,7 @@ class CoreSystem(QThread):
                 sleep(1)
                 # 资源分配成功，向机器人发送OK指令
                 #self.robot.say_ok()
+                #TODO: 在该循环不断进行detect，但只依据Robot的具体请求返回特定ROI的计算结果,
                 print('[Info] System init good.')
             elif self.DETECT_STAGE == 1:
                 print('[Info] System: ', self.DETECT_STAGE)
@@ -73,7 +74,7 @@ class CoreSystem(QThread):
         self.cuda_available = torch.cuda.is_available()  # Status状态：cuda
         self.detectThread = []
        # # 机器人通讯资源
-        self.robot = Robot(self.cfg['Robot_Conf']['IP'], int(self.cfg['Robot_Conf']['PORT']))
+        self.robot = Robot(self.cfg)
 
 
 
@@ -196,7 +197,8 @@ class CoreSystem(QThread):
         :param rect:
         :return:
         """
-        targetRef = np.array(self.cfg['TargetRef2Rect_Conf'][whichCamerawichROI.replace('ROI', 'Ref')], dtype=np.float32).reshape((3,1))
+        whichROI = whichCamerawichROI.split('Camera')[1].replace('ROI', 'Ref')
+        targetRef = np.array(self.cfg['TargetRef2Rect_Conf'][whichROI], dtype=np.float32).reshape((3,1))
         rectPtsRef = get_four_points()
         imgpts, rvec, tvec = pnp(rect, objp=rectPtsRef)
         tvec = tvec - targetRef
