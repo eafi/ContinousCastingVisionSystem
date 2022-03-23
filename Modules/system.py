@@ -49,7 +49,7 @@ class CoreSystem(QThread):
                     self.core_resources_check()  # 资源分配
                     self.DETECT_STAGE = 0  # 成功，进行自动状态转移
                     self.resourceInitOKSignal.emit()
-                    print('[Info] System init good.')
+                    LOG(log_types.OK, self.tr('System init good.'))
                 except Exception as e:
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.DETECT_STAGE == 0:  # 初始化成功状态，等待TCP链接，但同时已经开始计算图像
@@ -61,17 +61,25 @@ class CoreSystem(QThread):
                     m = self.targetObjs['LeftCameraLeftROI'].avg()
                 elif 'LeftCameraRightROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraRightROI'].avg()
-                if m is not None:
-                    self.robot.move(m)
-                    self.DETECT_STAGE = 0
+                self.request_robot_move(m)
             elif self.DETECT_STAGE == 0x12:  # 请求安装水口位置
-                print('system in 0x12')
                 m = None
                 if 'LeftCameraBottomROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraBottomROI'].avg()
-                if m is not None:
-                    self.robot.move(m)
-                    self.DETECT_STAGE = 0
+                self.request_robot_move(m)
+
+
+    def request_robot_move(self, m):
+        """
+        CoreSystem向PLC发起运动请求，并在PLC允许后才真正开始运动。
+        :param m:
+        :return:
+        """
+        if m is not None:
+            self.robot.request_move()  # 发送请求
+            if self.robot.canMove:  # 等PLC，在CoreSystem的cmdshandler中响应
+                self.robot.move(m)
+                self.DETECT_STAGE = 0  # 运动控制完毕，系统回到静默状态，等待PLC下一次指令
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
@@ -97,7 +105,8 @@ class CoreSystem(QThread):
         elif ctl == 0x12:
             print('sdfsdf')
             self.DETECT_STAGE = 0x12
-
+        elif ctl == 0x02: #  PLC允许机器人可以运动
+            self.robot.canMove = True
 
 
 

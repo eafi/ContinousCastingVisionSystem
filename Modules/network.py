@@ -76,6 +76,8 @@ class Network(QThread):
         self.msgManager = AbstractMsg()
         # 用于保存PLC连接的套接子，所有相关指令将通过该文件发送。读取并不需要单独管理.
         self.connectSocket = None
+        self.lstCtl = None  # 上一次的指令
+        self.lstData = None  # 上一次的数据，防止反复发送
 
     def run(self):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -86,7 +88,7 @@ class Network(QThread):
                 self.outputs = []
                 self.message_queues = {}
                 while inputs:
-                    print('wating for the next event')
+                    #print('wating for the next event')
                     readable, writable, exceptional = select.select(inputs, self.outputs, inputs, 1)
                     for s in readable:
                         if s is server:
@@ -141,13 +143,17 @@ class Network(QThread):
 
     def send(self, ctl, data=None):
         try:
-            if self.connectSocket is not None:
-                msg_to_send = self.msgManager.pack(ctl, data)
-                self.outputs.append(self.connectSocket)
-                self.message_queues[self.connectSocket].put(msg_to_send)
-                print('[Info] Sent:', ctl, data)
-            else:
-                LOG(log_types.WARN, self.tr('No connection yet.'))
+            # 禁止重复发送指令
+            if ctl != self.lstCtl or data != self.lstData:
+                if self.connectSocket is not None: # 存在PLC链接
+                    msg_to_send = self.msgManager.pack(ctl, data)
+                    self.outputs.append(self.connectSocket)
+                    self.message_queues[self.connectSocket].put(msg_to_send)
+                    print('[Info] Sent:', ctl, data)
+                    self.lstData = ctl
+                    self.lstData = data
+                else:
+                    LOG(log_types.WARN, self.tr('No connection yet.'))
         except Exception as e:
             print(e)
 
