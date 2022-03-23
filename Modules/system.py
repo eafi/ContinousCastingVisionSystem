@@ -17,6 +17,9 @@ from Modules.TargetObj import TargetObj
 from Modules.Robot import Robot
 from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 from time import sleep
+from cv2 import Rodrigues
+from scipy.spatial.transform import Rotation as R
+
 
 class CoreSystem(QThread):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
@@ -27,8 +30,6 @@ class CoreSystem(QThread):
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
         self.DETECT_STAGE = -1  # 系统检测宏观状态
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
-        self.DETECT_STAGE1_CONSTRAINED = []  # Stage1 可能会使用两个ROIs检测窗进行综合检测
-        self.DETECT_STAGE1_RECTS = []  # Stage1 多ROIs检测时，保存检测到的rects
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
         self.isDetecting = False
 
@@ -54,10 +55,23 @@ class CoreSystem(QThread):
             elif self.DETECT_STAGE == 0:  # 初始化成功状态，等待TCP链接，但同时已经开始计算图像
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
                 self.isDetecting = True
-            elif self.DETECT_STAGE == 1:
-                print('[Info] System: ', self.DETECT_STAGE)
-
-
+            elif self.DETECT_STAGE == 0x11:  # 请求安装水口位置
+                m = None
+                if 'LeftCameraLeftROI' in self.targetObjs:
+                    m = self.targetObjs['LeftCameraLeftROI'].avg()
+                elif 'LeftCameraRightROI' in self.targetObjs:
+                    m = self.targetObjs['LeftCameraRightROI'].avg()
+                if m is not None:
+                    self.robot.move(m)
+                    self.DETECT_STAGE = 0
+            elif self.DETECT_STAGE == 0x12:  # 请求安装水口位置
+                print('system in 0x12')
+                m = None
+                if 'LeftCameraBottomROI' in self.targetObjs:
+                    m = self.targetObjs['LeftCameraBottomROI'].avg()
+                if m is not None:
+                    self.robot.move(m)
+                    self.DETECT_STAGE = 0
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
@@ -76,7 +90,14 @@ class CoreSystem(QThread):
 
 
     def cmds_handler(self, ctl, data):
-        pass
+        print('in cmds handler.')
+        print(ctl)
+        if ctl == 0x11:
+            self.DETECT_STAGE = 0x11
+        elif ctl == 0x12:
+            print('sdfsdf')
+            self.DETECT_STAGE = 0x12
+
 
 
 
@@ -108,21 +129,23 @@ class CoreSystem(QThread):
         :return:
         """
         if rect.size == 0:
-            LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
+            pass
+            #LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
         else:
             LOG(log_types.OK, self.tr('In ' + description + ' found rect!'))
             # 从ROI到相机全幅图像的坐标偏移
             rect = rect + np.array(self.cfg['ROIs_Conf'][description][:2], dtype=np.float32)
-            if description not in self.targetObjs.keys():  # 全新找到的对象
-                self.targetObjs[description] = TargetObj(rect)
-            else:
-                # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
-                self.targetObjs[description].step(rect)
-
             # 根据系统状态解析Target最终的几何位置关系
             # 注意！这一步将Target坐标系转换到机械臂抓取的目标坐标系，因此CFG文件中Ref配置应该正确!!!
-            self.target_estimation_switch_stage(whichCamerawhichROI=description, rect=rect)
-        self.targetFoundSignal.emit(description, rect) # 与CameraWidget有关，用于绘制Target
+            robot2Target = self.target_estimation(whichCamerawhichROI=description, rect=rect)
+
+            if description not in self.targetObjs.keys():  # 全新找到的对象
+                self.targetObjs[description] = TargetObj(robot2Target)
+            else:
+                # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
+                self.targetObjs[description].step(robot2Target)
+
+        #self.targetFoundSignal.emit(description, trans) # 与CameraWidget有关，用于绘制Target
 
 
     def detect(self, state: str):
@@ -144,66 +167,29 @@ class CoreSystem(QThread):
                     tmpThread.start()
 
 
-    def target_estimation_switch_stage(self, whichCamerawhichROI: str, rect: np.ndarray):
+
+    def target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
         """
-        依据：
-        1. 视觉系统当前状态Stage
-        2. 配置文件DetectionStageROIs_Conf需要哪个相机的哪个ROI
-        对具体的target_estimation方法进行选择. 由于第一状态可能存在Constrained情况，稍微复杂一点。
-        :param whichCamerawhichROI:
-        :param rect:
-        :return:
-        """
-        assert self.DETECT_STAGE == 1 or \
-               self.DETECT_STAGE == 2 or \
-               self.DETECT_STAGE == 3, LOG(log_types.FAIL, self.tr(f'Vision system in invalid stage: {self.DETECT_STAGE}'))
-
-        if self.DETECT_STAGE == 1:
-            stage1conf = self.cfg['DetectionStageROIs_Conf']['DetectionStage1']
-            if len(stage1conf) == 1:
-                if whichCamerawhichROI in stage1conf:  # 单ROI估计
-                    self.target_estimation_single(whichCamerawhichROI, rect)
-            elif whichCamerawhichROI in stage1conf \
-                    and whichCamerawhichROI not in self.DETECT_STAGE1_CONSTRAINED:  # 多ROI且之前没看到过
-                self.DETECT_STAGE1_CONSTRAINED.append(whichCamerawhichROI)
-                self.DETECT_STAGE1_RECTS.append(rect)
-                if len(stage1conf) == len(self.DETECT_STAGE1_CONSTRAINED):
-                    self.target_estimation_multi(self.DETECT_STAGE1_CONSTRAINED, rects=self.DETECT_STAGE1_RECTS)
-                    self.DETECT_STAGE1_RECTS = []
-                    self.DETECT_STAGE1_CONSTRAINED = []
-        elif self.DETECT_STAGE == 2 or self.DETECT_STAGE == 3:
-            stageconf = self.cfg['DetectionStageROIs_Conf'][f'DetectionStage{self.DETECT_STAGE}']
-            if whichCamerawhichROI in stageconf:
-                self.target_estimation_single(whichCamerawichROI=whichCamerawhichROI, rect=rect)
-
-
-    def target_estimation_multi(self, whichCamerawhichROIs: list, rects: list):
-        """
-        视觉系统状态, 根据是否是多ROI进行目标的PnP计算.
-        :param whichCamerawhichROIs:
-        :param rects:
-        :return:
-        """
-        tvecs = []
-        for whichCamerawhichROI, rect in zip(whichCamerawhichROIs, rects):
-            imgpts, rvec, tvec = self.target_estimation_single(whichCamerawhichROI, rect)
-            tvecs.append(tvec)
-        print(np.mean(tvecs, axis=1))
-
-
-
-
-    def target_estimation_single(self, whichCamerawichROI: str, rect: np.ndarray):
-        """
-        视觉系统状态2, 单ROI进行PnP计算
+        目标估计: 根据标定板的物理尺度进行PnP计算, 然后根据CFG刚体矩阵转换到目标抓取位置，最后根据手眼标定矩阵转换到机器人坐标系
         :param whichCamerawichROI:
         :param rect:
         :return:
         """
-        whichROI = whichCamerawichROI.split('Camera')[1].replace('ROI', 'Ref')
-        targetRef = np.array(self.cfg['TargetRef2Rect_Conf'][whichROI], dtype=np.float32).reshape((3,1))
+        # 哪一个ROI区域，用于决定哪一个刚体目标
+        whichTarget = whichCamerawhichROI.split('Camera')[1].replace('ROI', 'Ref')
+        # 获得目标板到刚体目标的转换矩阵
+        rect2Target = self.cfg['RectRef2Target_Conf'][whichTarget]
+        # 目标板已知绝对物理尺寸(在目标板左上角圆心为原点的坐标系下)
         rectPtsRef = get_four_points()
+        # 得到目标板在相机坐标系下
         imgpts, rvec, tvec = pnp(rect, objp=rectPtsRef)
-        tvec = tvec - targetRef
-        print(tvec)
-        return imgpts, rvec, tvec
+        rotateMatrix, jac = Rodrigues(rvec)
+        camera2rect = np.zeros((4, 4))
+        camera2rect[:3,:3] = rotateMatrix
+        camera2rect[:3, 3] = tvec.reshape(1, -1)
+        camera2rect[3,3] = 1.0
+
+        robot2Camera = self.cfg['Robot2Camera_Conf']['Robot2Camera']
+        robot2Target = robot2Camera @ camera2rect @ rect2Target
+
+        return robot2Target

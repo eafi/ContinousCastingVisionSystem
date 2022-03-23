@@ -11,6 +11,8 @@ Robot文件提供了对机械臂的概念抽象，提供：
 from PyQt5.QtCore import QObject
 from Modules.network import Network
 from Modules.LOG import *
+from scipy.spatial.transform import Rotation as R
+import numpy as np
 
 
 class Robot(QObject):
@@ -23,14 +25,21 @@ class Robot(QObject):
         self.network.start()
 
 
-    def move(self, pos):
+    def move(self, transMat):
         """
         机器人运动到目标位置
-        :param pos:
+        :param transMat: 转换矩阵
         :return:
         """
         ctl = self.cfg['Network_Conf']['NetworkRequestMove']
-        self.network.send(ctl, pos)
+        # 从转换矩阵到向量： x y z - eular_x - eular_y - eular_z
+        eular = R.from_matrix(transMat[:3, :3]).as_euler('xyz', degrees=True)  # 外旋角度制
+        trans = transMat[:3, 3]
+        data = 9 * [np.float32(0.0)]
+        data[:3] = trans
+        data[4:-3] = eular
+        print(trans, eular, data)
+        self.network.send(ctl, data)
 
 
     def check_robot_states(self):
@@ -52,9 +61,6 @@ class Robot(QObject):
         ctl = self.cfg['Network_Conf']['NetworkError']
         self.network.send(ctl)
 
-
-    def slot_new_cmd(self, state):
-        print('sdfsddfgdfg', state)
 
 
 

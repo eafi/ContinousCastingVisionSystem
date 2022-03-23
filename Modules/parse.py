@@ -33,6 +33,7 @@ class CfgManager(QObject):
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
         parse_network(self)
+        parse_robot_camera_matrix(self)
 
 
 def parse_cfg(path: str):
@@ -106,17 +107,23 @@ def parse_target_ref(obj):
     :param obj: 包含了self.obj的对象
     :return:
     """
-    assert 'TargetRef2Rect_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
+    assert 'RectRef2Target_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
     from scipy.spatial.transform import Rotation as R
-    for key in obj.cfg['TargetRef2Rect_Conf']:
-        obj.cfg['TargetRef2Rect_Conf'][key] = [float(x) for x in obj.cfg['TargetRef2Rect_Conf'][key].split(',')]
-        eular = R.from_euler('xyz', [obj.cfg['TargetRef2Rect_Conf'][key][-3:]])
-        trans = np.array(obj.cfg['TargetRef2Rect_Conf'][key][:3])
+    for key in obj.cfg['RectRef2Target_Conf']:
+        obj.cfg['RectRef2Target_Conf'][key] = [float(x) for x in obj.cfg['RectRef2Target_Conf'][key].split(',')]
+        eular = R.from_euler('xyz', [obj.cfg['RectRef2Target_Conf'][key][-3:]])
+        trans = np.array(obj.cfg['RectRef2Target_Conf'][key][:3])
         m = np.zeros((4,4))
         m[:3,:3] = eular.as_matrix()
         m[:3, 3] = trans
         m[3,3] = 1.0
-        obj.cfg['TargetRef2Rect_Conf'][key] = m
+        obj.cfg['RectRef2Target_Conf'][key] = m
+
+def parse_robot_camera_matrix(obj):
+    assert 'Robot2Camera_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Robot2Camera Configuration.'))
+    obj.cfg['Robot2Camera_Conf']['Robot2Camera'] = np.array([float(x)  \
+                for x in obj.cfg['Robot2Camera_Conf']['Robot2Camera'].split(',')]).reshape(4,4)
+
 
 
 

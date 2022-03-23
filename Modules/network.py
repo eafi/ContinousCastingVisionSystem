@@ -9,14 +9,14 @@ import numpy as np
 from Modules.LOG import *
 import struct
 from collections import namedtuple
-PORT = 6669
+PORT = 6668
 import queue
 
 
 
 class AbstractMsg(QObject):
     # 向绑定用户发送控制字符以及数据，然后接受缓存
-    NetworkCmdSignal = pyqtSignal(int, list)  # 在Robot.py中绑定,用于告知机器人状态
+    NetworkCmdSignal = pyqtSignal(int, list)
     def __init__(self):
         super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)

@@ -8,7 +8,7 @@ TargetObj用于描述检测到的目标对象。一旦监测系统检测到对�
 
 并对整个系统提供如下信息：
 1. 对象的运动、静止状态
-2. 优化检测对象函数的ROI，i.e. 缩小ROI区域
+2. 返回求平均后的目标位置
 """
 from PyQt5.QtCore import QObject
 import numpy as np
@@ -16,23 +16,35 @@ from collections import deque
 
 
 class TargetObj(QObject):
-    def __init__(self, rect: np.ndarray):
+    def __init__(self, m):
         """
-        :param rect: 第一次检测到的位置
+        :param trans: 第一次检测到的偏移量
+        :param eular: 第一次检测到的Eular转角
         """
-        self.rects = deque(maxlen=10)
-        self.rects.append(rect)
+        self.momentum = deque(maxlen=10)
+        self.momentum.append(m)
+        self.isStable = False
 
 
-    def step(self, rect):
+    def step(self, m):
         """
         刷新目标坐标
-        :param rect:
         :return:
         """
-        if np.linalg.norm(rect-self.rects[-1], ord=1) < 0.01:
-            print('Stable....')
+        if np.linalg.norm(m-self.momentum[0], ord=1) < 0.5:
+            # 标定板静止
+            self.isStable = True
         else:
-            print('Moving...')
-        self.rects.append(rect)
+            self.isStable = False
+        self.momentum.append((m))
+
+
+    def avg(self):
+        if self.isStable:
+            m = np.mean(self.momentum, axis=0)
+            return m
+        # 标定板正在运动，不能返回
+        return None
+
+
 
