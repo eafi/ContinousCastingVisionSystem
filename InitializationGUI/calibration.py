@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import glob
+from time import sleep
 
 
 def skew(v):
@@ -147,9 +148,79 @@ def camera_calibration(grid=(11, 8), width=35):
     return mtx, dist, rvecs, tvecs
 
 
-def calibration():
+from PyQt5.QtWidgets import QWidget, QMessageBox
+from Modules.Robot import Robot
+class CalibrationWidget(QWidget):
     """
     联合标定： 相机标定 + 机械臂手眼标定. 需要提供机械臂末端的姿态信息
     :return:
     """
-    pass
+    def __init__(self, cfg, parent):
+        super(CalibrationWidget, self).__init__()
+        self.robot = Robot(cfg)
+        self.robot.network.msgManager.NetworkCmdSignal.connect(self.cmds_handler)
+        self.cfg = cfg
+        self.canMove = False # 机器人能否运动
+        self.robotMovePos = []  # 解析的机器人移动点为将会被保存到此处
+        self.parse_robot_move()
+        self.posCnt = 0 # 用于记录当前发送到哪一个点了
+        self.parent = parent
+
+
+    def slot_init(self):
+        """
+        初始化标定，只在用户点击手眼标定后进行初始化工作
+        :return:
+        """
+        warningStr='Do you want to recalibrate the arm and the vision system?\n' \
+                   'You are supposed to do this process only if one of the followings happened:\n' \
+                   '1. This is a brand new system and have not calibrate yet.\n' \
+                   '2. The relative position between cameras and the arm has been changed.\n' \
+                   '3. The focal length of cameras has been changed.\n' \
+                   'Before you click YES button please make sure the chessboard has been right installed on the' \
+                   'end of arm.\n\n\n' \
+                   'WARNING: THE ARM WILL MOVE AUTOMATICALLY DURING CALIBRATION.'
+
+        ret = QMessageBox.warning(self, self.tr('Warning!'),
+                                  self.tr(warningStr), QMessageBox.No, QMessageBox.Yes)
+
+        if ret == QMessageBox.Yes:
+            if self.robot.network.connectSocket is not None:
+                self.robot.request_move() # 请求移动，等待PLC相应
+            else:
+                print('No connect.')
+
+
+    def cmds_handler(self, ctl, data):
+        # PLC相应，callback该函数
+        print('in cmds hander.', ctl)
+        if ctl == 0x02: # PLC允许机器臂受软件控制
+            if self.posCnt == len(self.robotMovePos):
+                self.calibration()
+                return
+            if self.posCnt >= 1: # 上一次运动已经到位，可以保存图像
+                # TODO: 保存图像
+                cv2.imwrite(f'../CalibrationImages/Left-{self.posCnt-1}.png', self.parent.leftCamera.im_np)
+                cv2.imwrite(f'../CalibrationImages/Right-{self.posCnt-1}.png', self.parent.rightCamera.im_np)
+
+            self.robot.move_vector(self.robotMovePos[self.posCnt])
+            self.posCnt += 1
+            sleep(2)
+            self.robot.request_move()
+
+    def calibration(self):
+        print('calibrating!!!!!')
+        pass
+
+    def parse_robot_move(self):
+        """
+        解析CFG文件中的RobotMovePos
+        :return:
+        """
+        robotMovePosMap = self.cfg['HandEyeCalibration_Conf']
+        for key in robotMovePosMap:
+            if 'RobotMovePos' in key:
+                pos = [float(x) for x in robotMovePosMap[key].split(',')]
+                self.robotMovePos.append(pos)
+
+

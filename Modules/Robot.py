@@ -16,19 +16,22 @@ import numpy as np
 
 
 class Robot(QObject):
-    def __init__(self, cfg):
+    def __init__(self, cfg, blocking=False):
+        """
+
+        :param cfg:
+        :param blocking: 网络是否采用阻塞，在CoreSystem下不能阻塞；但在Initalization下需要阻塞
+        """
         super(Robot, self).__init__()
         self.cfg = cfg
         self.ip = cfg['Network_Conf']['IP']
         self.port = cfg['Network_Conf']['PORT']
         self.network = Network(ip=self.ip, port=self.port)
         self.network.start()
-        self.canMove = False
-        self.network_request_cnt = 0
 
 
     def request_move(self):
-        """
+        """ ??????????????????????????????????????????????
         机器人在真正运动前，需要先向PLC请求能否运动： 0x02
         此时，默认情况下Robot - canMove 为False，在System主循环中将不会真正执行运动。
         直到TCP新指令由CoreSystem的cmdsHandler接受，为0x02允许运动后，设置canMove=True, coresystem主循环才真正执行Robot - move()
@@ -39,13 +42,12 @@ class Robot(QObject):
 
 
 
-    def move(self, transMat):
+    def move_trans(self, transMat):
         """
         机器人运动到目标位置
         :param transMat: 转换矩阵
         :return:
         """
-        self.canMove = False # 静止运动
         # 从转换矩阵到向量： x y z - eular_x - eular_y - eular_z
         eular = R.from_matrix(transMat[:3, :3]).as_euler('xyz', degrees=True)  # 外旋角度制
         trans = transMat[:3, 3]
@@ -56,6 +58,16 @@ class Robot(QObject):
         ctl = self.cfg['Network_Conf']['NetworkMoving']
         self.network.send(ctl, data)
         return True
+
+    def move_vector(self, vector):
+        """
+
+        :param vector: 使用向量（XYZ + Eular） 进行传参
+        :return:
+        """
+        ctl = self.cfg['Network_Conf']['NetworkMoving']
+        self.network.send(ctl, vector)
+
 
 
     def check_robot_states(self):

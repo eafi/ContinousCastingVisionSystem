@@ -9,7 +9,7 @@ import numpy as np
 from Modules.LOG import *
 import struct
 from collections import namedtuple
-PORT = 6668
+PORT = 6667
 import queue
 
 

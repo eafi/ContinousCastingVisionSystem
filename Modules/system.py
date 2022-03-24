@@ -76,10 +76,8 @@ class CoreSystem(QThread):
         :return:
         """
         if m is not None:
-            self.robot.request_move()  # 发送请求
-            if self.robot.canMove:  # 等PLC，在CoreSystem的cmdshandler中响应
-                self.robot.move(m)
-                self.DETECT_STAGE = 0  # 运动控制完毕，系统回到静默状态，等待PLC下一次指令
+            self.robot.move_trans(m)
+            self.DETECT_STAGE = 0  # 运动控制完毕，系统回到静默状态，等待PLC下一次指令
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
@@ -105,8 +103,8 @@ class CoreSystem(QThread):
         elif ctl == 0x12:
             print('sdfsdf')
             self.DETECT_STAGE = 0x12
-        elif ctl == 0x02: #  PLC允许机器人可以运动
-            self.robot.canMove = True
+        #elif ctl == 0x02: #  PLC允许机器人可以运动
+        #    self.robot.canMove = True
 
 
 
@@ -198,7 +196,7 @@ class CoreSystem(QThread):
         camera2rect[:3, 3] = tvec.reshape(1, -1)
         camera2rect[3,3] = 1.0
 
-        robot2Camera = self.cfg['Robot2Camera_Conf']['Robot2Camera']
+        robot2Camera = self.cfg['HandEyeCalibration_Conf']['HandEyeMatrix']
         robot2Target = robot2Camera @ camera2rect @ rect2Target
 
         return robot2Target

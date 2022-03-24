@@ -29,7 +29,6 @@ class CfgManager(QObject):
         """
         self.cfg = parse_cfg(self.path)
         parse_resources_cfg(self)
-        parse_stage_rois(self)
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
         parse_network(self)
@@ -82,23 +81,6 @@ def parse_resources_cfg(obj):
         obj.DETECT_CFG_THREADS = 4
 
 
-def parse_stage_rois(obj):
-    """
-    解析CFG文件 : 不同阶段检测哪一个ROI的配置文件.
-    1. 默认只使用LeftCamera， RightCamera只用作冗余；
-    2. 第一阶段可以只用一个ROI，也可以使用两个ROI进行constrained限制性检测；
-    3. 第二三阶段均只使用一个ROI
-    4. 冗余相机、冗余ROI可以有意义的（服从视觉系统ROI编号映射关系条件下）替换，比如在第一阶段的两个ROI可以换成1和5,或者1和7等有意义的组合.
-        具体替换需要在CFG文件中执行
-    :param obj: 包含了self.cfg的对象，默认为mainUI对象
-    :return:
-    """
-    assert 'DetectionStageROIs_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Stage Configuration.'))
-    obj.cfg['DetectionStageROIs_Conf']['DetectionStage1'] =\
-        obj.cfg['DetectionStageROIs_Conf']['DetectionStage1'].split(',')
-
-    obj.cfg['DetectionStageROIs_Conf']['DetectionStage1Redundancy'] = \
-        obj.cfg['DetectionStageROIs_Conf']['DetectionStage1Redundancy'].split(',')
 
 
 def parse_target_ref(obj):
@@ -120,9 +102,9 @@ def parse_target_ref(obj):
         obj.cfg['RectRef2Target_Conf'][key] = m
 
 def parse_robot_camera_matrix(obj):
-    assert 'Robot2Camera_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Robot2Camera Configuration.'))
-    obj.cfg['Robot2Camera_Conf']['Robot2Camera'] = np.array([float(x)  \
-                for x in obj.cfg['Robot2Camera_Conf']['Robot2Camera'].split(',')]).reshape(4,4)
+    assert 'HandEyeCalibration_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find HandEyeCalibration Configuration.'))
+    obj.cfg['HandEyeCalibration_Conf']['HandEyeMatrix'] = np.array([float(x)  \
+                for x in obj.cfg['HandEyeCalibration_Conf']['HandEyeMatrix'].split(',')]).reshape(4,4)
 
 
 

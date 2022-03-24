@@ -10,6 +10,7 @@ from PyQt5.QtCore import QObject
 from distanceVofCheck import DistanceVOFCheck
 from Modules.parse import CfgManager
 from InitializationCameraWidget import InitializationCameraWidget
+from InitializationGUI.calibration import CalibrationWidget
 
 
 class MainGUI(QWidget):
@@ -23,20 +24,25 @@ class MainGUI(QWidget):
         self.setWindowTitle(self.tr('Initialization'))
         self.btn1 = QPushButton(self.tr('Distance & VOF\nCheck'))  # 距离与视场检查
         self.btn1.setFixedSize(120, 80)
-        self.btn2 = QPushButton(self.tr('Robot-Eye\nCalibration'))  # 手眼标定
+        self.btn2 = QPushButton(self.tr('Hand-Eye\nCalibration'))  # 手眼标定
         self.btn2.setFixedSize(120, 80)
-        self.btn3 = QPushButton(self.tr('Camera\nCalibration'))  # 相机标定
-        self.btn3.setFixedSize(120, 80)
+        #self.btn3 = QPushButton(self.tr('Camera\nCalibration'))  # 相机标定
+        #self.btn3.setFixedSize(120, 80)
 
         btnLayout = QHBoxLayout()
         btnLayout.addWidget(self.btn1)
         btnLayout.addWidget(self.btn2)
-        btnLayout.addWidget(self.btn3)
 
+        #============== Camera =========================
         self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'))
         self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'))
         self.leftCamera.setFixedSize(self.leftCamera.w, self.leftCamera.h)
         self.rightCamera.setFixedSize(self.rightCamera.w, self.rightCamera.h)
+
+
+        #============== Calibration =================
+        self.calibration = CalibrationWidget(cfg=self.cfgManager.cfg, parent=self)
+
         cameraLayout = QHBoxLayout()
         cameraLayout.addWidget(self.leftCamera)
         cameraLayout.addWidget(self.rightCamera)
@@ -52,6 +58,9 @@ class MainGUI(QWidget):
         #self.distanceVOF = DistanceVOFCheck(self.cfgManager.cfg)
         self.btn1.clicked.connect(self.leftCamera.slot_draw_mininum_rects)
         self.btn1.clicked.connect(self.rightCamera.slot_draw_mininum_rects)
+
+        self.btn2.clicked.connect(self.calibration.slot_init)
+
 
 
 if __name__ == '__main__':
