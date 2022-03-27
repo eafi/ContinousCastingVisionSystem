@@ -11,6 +11,7 @@ from distanceVofCheck import DistanceVOFCheck
 from Modules.parse import CfgManager
 from InitializationCameraWidget import InitializationCameraWidget
 from InitializationGUI.calibration import CalibrationWidget
+from harvesters.core import Harvester
 
 
 class MainGUI(QWidget):
@@ -34,8 +35,11 @@ class MainGUI(QWidget):
         btnLayout.addWidget(self.btn2)
 
         #============== Camera =========================
-        self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'))
-        self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'))
+        h = Harvester()
+        h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+        h.update()
+        self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'), ia=h.create_image_acquirer(0))
+        self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'), ia=h.create_image_acquirer(1))
         self.leftCamera.setFixedSize(self.leftCamera.w, self.leftCamera.h)
         self.rightCamera.setFixedSize(self.rightCamera.w, self.rightCamera.h)
 

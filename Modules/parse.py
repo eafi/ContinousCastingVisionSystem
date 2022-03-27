@@ -15,9 +15,10 @@ from Global_Val import Signal_Map
 
 class CfgManager(QObject):
     cfgUpdateSignal = pyqtSignal()
-    def __init__(self, path):
+    def __init__(self, path, platform):
         super(CfgManager, self).__init__()
         self.path = path
+        self.platform = platform
         self.cfgUpdateSlot()  # 更新/初始化系统配置文件
         Signal_Map['CfgUpdateSignal'] = self.cfgUpdateSignal
         self.cfgUpdateSignal.connect(self.cfgUpdateSlot)
@@ -27,7 +28,7 @@ class CfgManager(QObject):
         刷新CFG文件
         :return:
         """
-        self.cfg = parse_cfg(self.path)
+        self.cfg = parse_cfg(self.path, self.platform)
         parse_resources_cfg(self)
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
@@ -35,14 +36,18 @@ class CfgManager(QObject):
         parse_robot_camera_matrix(self)
 
 
-def parse_cfg(path: str):
+def parse_cfg(path: str, platform):
     if not path.endswith(('.cfg') or not os.path.exists(path)):
         output = 'the cfg file not exist.'
         LOG(log_types.FAIL, output)
         raise FileNotFoundError(output)
 
-    with open(path, 'r') as f:
-        lines = f.read().split('\n')
+    if platform == 'Linux':
+        with open(path, 'r') as f:
+            lines = f.read().split('\n')
+    else:
+        with open(path, 'r', encoding='utf-8') as f:
+            lines = f.read().split('\n')
 
 
     lines = [x.strip() for x in lines]

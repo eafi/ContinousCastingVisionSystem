@@ -11,11 +11,12 @@ from collections import deque
 class BaseCameraWidget(QWidget):
     cameraStatusSignal = pyqtSignal(str)
 
-    def __init__(self, cameraType):
+    def __init__(self, cameraType, ia):
         super(BaseCameraWidget, self).__init__()
         self.im_np = None
         self.fps = 33
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
+        self.ia = ia
         self.init()
 
 
@@ -69,7 +70,7 @@ class BaseCameraWidget(QWidget):
         :return:
         """
         try:
-            self.camera = camera.Camera()
+            self.camera = camera.Camera(ia=self.ia)
             #self.camera = fakeCamera.Camera()
             self.im_np = self.camera.capture()
             if self.im_np is not None:

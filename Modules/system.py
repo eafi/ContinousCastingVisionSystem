@@ -19,6 +19,8 @@ from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWid
 from time import sleep
 from cv2 import Rodrigues
 from scipy.spatial.transform import Rotation as R
+from harvesters.core import Harvester
+from platform import system
 
 
 class CoreSystem(QThread):
@@ -54,7 +56,7 @@ class CoreSystem(QThread):
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.DETECT_STAGE == 0:  # 初始化成功状态，等待TCP链接，但同时已经开始计算图像
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
-                self.isDetecting = True
+                self.isDetecting = False
             elif self.DETECT_STAGE == 0x11:  # 请求安装水口位置
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
@@ -67,6 +69,7 @@ class CoreSystem(QThread):
                 if 'LeftCameraBottomROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraBottomROI'].avg()
                 self.request_robot_move(m)
+
 
 
     def request_robot_move(self, m):
@@ -83,9 +86,26 @@ class CoreSystem(QThread):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
         :return:
         """
+
+        # 确定系统平台
+        self.sysName = system()
+
         # 读取CFG文件夹
-        self.cfgManager = CfgManager(path='CONF.cfg')
+        self.cfgManager = CfgManager(path='CONF.cfg', platform=self.sysName)
         self.cfg = self.cfgManager.cfg
+
+        # 分配相机资源
+        self.h = Harvester()
+        if self.sysName == 'Linux':
+            self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+        else:
+            self.h.add_file('C:/...')
+        self.h.update()
+        self.camera_1 = self.h.create_image_acquirer(0)
+        self.camera_2 = self.h.create_image_acquirer(1)
+        self.camera_1.start()
+        self.camera_2.start()
+
         # CUDA状态
         import torch
         self.cuda_available = torch.cuda.is_available()  # Status状态：cuda

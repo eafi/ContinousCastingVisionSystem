@@ -10,8 +10,8 @@ import numpy as np
 from Modules.BaseCameraWidget import BaseCameraWidget
 class CoreSystemCameraWidget(BaseCameraWidget):
 
-    def __init__(self, cameraType, cfg):
-        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType)
+    def __init__(self, cameraType, cfg, harversters):
+        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType, harversters=harversters)
         self.cfg = cfg
         self.rect = None  # 用于绘制Target
         # 是否绘制ROIs
