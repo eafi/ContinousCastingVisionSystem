@@ -56,7 +56,7 @@ class CoreSystem(QThread):
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.DETECT_STAGE == 0:  # 初始化成功状态，等待TCP链接，但同时已经开始计算图像
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
-                self.isDetecting = False
+                self.isDetecting = True
             elif self.DETECT_STAGE == 0x11:  # 请求安装水口位置
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
@@ -87,16 +87,13 @@ class CoreSystem(QThread):
         :return:
         """
 
-        # 确定系统平台
-        self.sysName = system()
-
         # 读取CFG文件夹
-        self.cfgManager = CfgManager(path='CONF.cfg', platform=self.sysName)
+        self.cfgManager = CfgManager(path='CONF.cfg')
         self.cfg = self.cfgManager.cfg
 
         # 分配相机资源
         self.h = Harvester()
-        if self.sysName == 'Linux':
+        if system() == 'Linux':
             self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
         else:
             self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
@@ -168,13 +165,14 @@ class CoreSystem(QThread):
             # 注意！这一步将Target坐标系转换到机械臂抓取的目标坐标系，因此CFG文件中Ref配置应该正确!!!
             robot2Target = self.target_estimation(whichCamerawhichROI=description, rect=rect)
 
+            # 系统只返回静止状态下的标定, 因此系统将保存并分析检测到的任何标定板信息
             if description not in self.targetObjs.keys():  # 全新找到的对象
                 self.targetObjs[description] = TargetObj(robot2Target)
             else:
                 # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
                 self.targetObjs[description].step(robot2Target)
 
-        #self.targetFoundSignal.emit(description, trans) # 与CameraWidget有关，用于绘制Target
+            self.targetFoundSignal.emit(description, rect) # 与CameraWidget有关，用于绘制Target
 
 
     def detect(self, state: str):

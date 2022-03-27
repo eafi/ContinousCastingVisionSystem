@@ -5,6 +5,7 @@ Email: imeafi@gmail.com
 
 对CONF.conf文件进行解码
 """
+import functools
 import os
 
 import numpy as np
@@ -13,12 +14,18 @@ from Modules.LOG import *
 from PyQt5.QtCore import QObject, pyqtSignal
 from Global_Val import Signal_Map
 
+from platform import system
+if system() == 'Linux':
+    open = open
+else:
+    open = functools.partial(open, encoding='utf-8')
+
+
 class CfgManager(QObject):
     cfgUpdateSignal = pyqtSignal()
-    def __init__(self, path, platform):
+    def __init__(self, path):
         super(CfgManager, self).__init__()
         self.path = path
-        self.platform = platform
         self.cfgUpdateSlot()  # 更新/初始化系统配置文件
         Signal_Map['CfgUpdateSignal'] = self.cfgUpdateSignal
         self.cfgUpdateSignal.connect(self.cfgUpdateSlot)
@@ -28,7 +35,7 @@ class CfgManager(QObject):
         刷新CFG文件
         :return:
         """
-        self.cfg = parse_cfg(self.path, self.platform)
+        self.cfg = parse_cfg(self.path)
         parse_resources_cfg(self)
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
@@ -36,17 +43,13 @@ class CfgManager(QObject):
         parse_robot_camera_matrix(self)
 
 
-def parse_cfg(path: str, platform):
+def parse_cfg(path: str):
     if not path.endswith(('.cfg') or not os.path.exists(path)):
         output = 'the cfg file not exist.'
         LOG(log_types.FAIL, output)
         raise FileNotFoundError(output)
 
-    if platform == 'Linux':
-        with open(path, 'r') as f:
-            lines = f.read().split('\n')
-    else:
-        with open(path, 'r', encoding='utf-8') as f:
+    with open(path, 'r') as f:
             lines = f.read().split('\n')
 
 
@@ -152,6 +155,7 @@ def write_couple_cfg(couple: tuple, path='CONF.cfg'):
     :param path:
     :return:
     """
+    dir = path.split('CONF.cfg')[0]
     key, newVal = couple
     if not isinstance(key, str) or not isinstance(newVal, str):
         errorstr = 'Write to configuration value \'couple\' should be str tuple.'
@@ -163,9 +167,8 @@ def write_couple_cfg(couple: tuple, path='CONF.cfg'):
         output = 'the cfg file not exist.'
         LOG(log_types.FAIL, output)
         raise FileNotFoundError(output)
-
     with open(path, 'r') as fr:
-        with open('cfg.sw', 'w') as fw:
+        with open(dir+'cfg.sw', 'w', encoding='utf-8') as fw:
             for line in fr:
                 keyLine = line.split('=')
                 if key not in keyLine:
@@ -176,12 +179,12 @@ def write_couple_cfg(couple: tuple, path='CONF.cfg'):
         fw.close()
 
     with open(path, 'w') as fw:
-        with open('cfg.sw', 'r') as fr:
+        with open(dir+'cfg.sw', 'r') as fr:
             data = fr.read()
             fw.write(data)
     fr.close()
     fw.close()
-    os.remove('cfg.sw')
+    os.remove(dir+'cfg.sw')
 
 
 

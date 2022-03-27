@@ -14,9 +14,9 @@ class CoreSystemCameraWidget(BaseCameraWidget):
         self.cfg = cfg
         self.rect = None  # 用于绘制Target
         # 是否绘制ROIs
-        self.isDrawROIs = False
+        self.isDrawROIs = True
         # 是否绘制Targets
-        self.isDrawTargets = False
+        self.isDrawTargets = True
 
 
     def paintEvent(self, event):

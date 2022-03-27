@@ -194,7 +194,8 @@ class CalibrationWidget(QWidget):
     def cmds_handler(self, ctl, data):
         # PLC相应，callback该函数
         print('in cmds hander.', ctl)
-        if ctl == 0x02: # PLC允许机器臂受软件控制
+        if ctl == 0x02: # PLC发送'允许'机器臂受软件控制
+            # 所有的点全部发送完毕，对保存的图像进行手眼标定
             if self.posCnt == len(self.robotMovePos):
                 self.calibration()
                 return

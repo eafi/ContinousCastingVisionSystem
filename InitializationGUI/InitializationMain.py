@@ -18,8 +18,7 @@ from platform import system
 class MainGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.sysName = system()
-        self.cfgManager = CfgManager(path='../CONF.cfg', platform=self.sysName)
+        self.cfgManager = CfgManager(path='../CONF.cfg')
         self.initUI()
         self.clickedBinding()
 
@@ -38,7 +37,7 @@ class MainGUI(QWidget):
 
         #============== Camera =========================
         self.h = Harvester()
-        if self.sysName == 'Linux':
+        if system() == 'Linux':
             self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
         else:
             self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
@@ -74,8 +73,6 @@ class MainGUI(QWidget):
         self.btn1.clicked.connect(self.rightCamera.slot_draw_mininum_rects)
 
         self.btn2.clicked.connect(self.calibration.slot_init)
-
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
