@@ -7,8 +7,8 @@ from Global_Val import Signal_Map
 from Modules.parse import write_couple_cfg
 
 class InitializationCameraWidget(BaseCameraWidget):
-    def __init__(self, cameraType, cfg, ia):
-        super(InitializationCameraWidget, self).__init__(cameraType=cameraType, ia=ia)
+    def __init__(self, cameraType, cfg, harvesters):
+        super(InitializationCameraWidget, self).__init__(cameraType=cameraType, harvesters=harvesters)
         self.cfg = cfg
         # Distance VOF检查: 绘制最小200x200的多个Rects
         self.isDrawMininumRects = False

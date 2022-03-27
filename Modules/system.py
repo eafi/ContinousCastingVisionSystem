@@ -99,8 +99,10 @@ class CoreSystem(QThread):
         if self.sysName == 'Linux':
             self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
         else:
-            self.h.add_file('C:/...')
+            self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
         self.h.update()
+        LOG(log_types.NOTICE, self.tr('Camera List: '))
+        print(self.h.device_info_list)
         self.camera_1 = self.h.create_image_acquirer(0)
         self.camera_2 = self.h.create_image_acquirer(1)
         self.camera_1.start()

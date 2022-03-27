@@ -3,8 +3,6 @@ A simple Program for grabing video from basler camera and converting it to openc
 Tested on Basler acA1300-200uc (USB3, linux 64bit , python 3.5)
 '''
 import cv2
-from pypylon import pylon
-from pypylon import genicam
 from PyQt5.QtCore import QObject
 from Modules.LOG import *
 
@@ -37,12 +35,21 @@ class Camera(QObject):
 
 
 from harvesters.core import Harvester
+from platform import system
 if __name__ == '__main__':
     h = Harvester()
-    h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+    if system() == 'Linux':
+        h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+    else:
+        h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
     h.update()
-    c = Camera(ia=h.create_image_acquirer(1))
-    c2 = Camera(ia=h.create_image_acquirer(2))
+    ia = h.create_image_acquirer(0)
+    ia2 = h.create_image_acquirer(1)
+    ia.start()
+    ia2.start()
+    c = Camera(ia=ia)
+    c2 = Camera(ia=ia2)
+
     while True:
         img = c.capture()
         if img is not None:

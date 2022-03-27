@@ -5,13 +5,12 @@ from PyQt5.QtCore import QTimer, QRectF, pyqtSignal, Qt, QPointF
 from PyQt5.QtGui import QImage, QPainter, QPen, QPolygonF
 from Modules import camera, fakeCamera
 from Modules.LOG import *
-from pypylon import genicam
 import numpy as np
 from Modules.BaseCameraWidget import BaseCameraWidget
 class CoreSystemCameraWidget(BaseCameraWidget):
 
-    def __init__(self, cameraType, cfg, harversters):
-        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType, harversters=harversters)
+    def __init__(self, cameraType, cfg, harvesters):
+        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType, harvesters=harvesters)
         self.cfg = cfg
         self.rect = None  # 用于绘制Target
         # 是否绘制ROIs

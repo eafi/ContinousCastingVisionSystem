@@ -5,18 +5,17 @@ from PyQt5.QtCore import QTimer, QRectF, pyqtSignal, Qt, QPointF
 from PyQt5.QtGui import QImage, QPainter, QPen, QPolygonF
 from Modules import camera, fakeCamera
 from Modules.LOG import *
-from pypylon import genicam
 import numpy as np
 from collections import deque
 class BaseCameraWidget(QWidget):
     cameraStatusSignal = pyqtSignal(str)
 
-    def __init__(self, cameraType, ia):
+    def __init__(self, cameraType, harvesters):
         super(BaseCameraWidget, self).__init__()
         self.im_np = None
         self.fps = 33
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
-        self.ia = ia
+        self.ia = harvesters
         self.init()
 
 
@@ -78,7 +77,7 @@ class BaseCameraWidget(QWidget):
                 self.resize(self.w, self.h)
             #self.camera = fakeCamera.Camera()  # 调试用
             LOG(log_types.OK, self.tr(self.cameraType+': Camera Init OK.'))
-        except genicam.RuntimeException as e:
+        except Exception as e:
             # 相机资源初始化失败
             LOG(log_types.WARN, self.tr(self.cameraType+': Camera Init failed. '))
             self.cameraStatusSignal.emit('Break')

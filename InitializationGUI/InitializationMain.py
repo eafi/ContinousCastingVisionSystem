@@ -12,12 +12,14 @@ from Modules.parse import CfgManager
 from InitializationCameraWidget import InitializationCameraWidget
 from InitializationGUI.calibration import CalibrationWidget
 from harvesters.core import Harvester
+from platform import system
 
 
 class MainGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.cfgManager = CfgManager(path='../CONF.cfg')
+        self.sysName = system()
+        self.cfgManager = CfgManager(path='../CONF.cfg', platform=self.sysName)
         self.initUI()
         self.clickedBinding()
 
@@ -35,11 +37,19 @@ class MainGUI(QWidget):
         btnLayout.addWidget(self.btn2)
 
         #============== Camera =========================
-        h = Harvester()
-        h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
-        h.update()
-        self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'), ia=h.create_image_acquirer(0))
-        self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'), ia=h.create_image_acquirer(1))
+        self.h = Harvester()
+        if self.sysName == 'Linux':
+            self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+        else:
+            self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
+        self.h.update()
+        print(self.h.device_info_list)
+        self.camera_1 = self.h.create_image_acquirer(0)
+        self.camera_2 = self.h.create_image_acquirer(1)
+        self.camera_1.start()
+        self.camera_2.start()
+        self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'), harvesters=self.camera_1)
+        self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'), harvesters=self.camera_2)
         self.leftCamera.setFixedSize(self.leftCamera.w, self.leftCamera.h)
         self.rightCamera.setFixedSize(self.rightCamera.w, self.rightCamera.h)
 
