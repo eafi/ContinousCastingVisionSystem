@@ -10,12 +10,16 @@ from collections import deque
 class BaseCameraWidget(QWidget):
     cameraStatusSignal = pyqtSignal(str)
 
-    def __init__(self, cameraType, harvesters):
+    def __init__(self, cfg, cameraType, harvesters):
         super(BaseCameraWidget, self).__init__()
         self.im_np = None
         self.fps = 33
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
         self.ia = harvesters
+
+        calibrationmtx = cfg['HandEyeCalibration_Conf']
+        self.mtx = calibrationmtx[f'{cameraType}Matrix']
+        self.dist = calibrationmtx[f'{cameraType}Dist']
         self.init()
 
 
@@ -26,6 +30,8 @@ class BaseCameraWidget(QWidget):
         """
         if self.camera is not None:
             self.im_np = self.camera.capture()
+            # 矫正
+            self.im_np = cv2.remap(self.im_np, self.mapx, self.mapy, cv2.INTER_LINEAR)
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
                 self.cameraStatusSignal.emit('OK')
@@ -71,15 +77,21 @@ class BaseCameraWidget(QWidget):
         try:
             self.camera = camera.Camera(ia=self.ia)
             #self.camera = fakeCamera.Camera()
+            # 此处获得图像只为获得图像的尺寸信息以及初始化
             self.im_np = self.camera.capture()
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
+
+                # 明确相机的畸变和内参数矩阵
+                self.newCameramtx, roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.w, self.h), 1, (self.w, self.h))
+                # 重映射矩阵
+                self.mapx, self.mapy = cv2.initUndistortRectifyMap(self.mtx, self.dist, None, self.newCameramtx, (self.w, self.h), 5)
                 self.resize(self.w, self.h)
             #self.camera = fakeCamera.Camera()  # 调试用
             LOG(log_types.OK, self.tr(self.cameraType+': Camera Init OK.'))
         except Exception as e:
             # 相机资源初始化失败
-            LOG(log_types.WARN, self.tr(self.cameraType+': Camera Init failed. '))
+            LOG(log_types.WARN, self.tr(self.cameraType+': Camera Init failed. '+e.args[0]))
             self.cameraStatusSignal.emit('Break')
             self.camera = None
 

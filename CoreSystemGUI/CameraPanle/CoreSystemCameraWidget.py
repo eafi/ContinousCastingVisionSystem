@@ -10,7 +10,7 @@ from Modules.BaseCameraWidget import BaseCameraWidget
 class CoreSystemCameraWidget(BaseCameraWidget):
 
     def __init__(self, cameraType, cfg, harvesters):
-        super(CoreSystemCameraWidget, self).__init__(cameraType=cameraType, harvesters=harvesters)
+        super(CoreSystemCameraWidget, self).__init__(cfg=cfg, cameraType=cameraType, harvesters=harvesters)
         self.cfg = cfg
         self.rect = None  # 用于绘制Target
         # 是否绘制ROIs

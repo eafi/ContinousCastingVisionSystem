@@ -109,7 +109,7 @@ def hand_eye_calibration(A, C, flag):
 #    hand_eye_cla(A, C, 0)
 
 
-def camera_calibration(grid=(11, 8), width=35):
+def camera_calibration(images, grid=(11, 8), width=35):
     """
     张正友标定
     :return:
@@ -123,7 +123,6 @@ def camera_calibration(grid=(11, 8), width=35):
     # Arrays to store object points and image points from all the images.
     objpoints = []  # 3d point in real world space
     imgpoints = []  # 2d points in image plane.
-    images = glob.glob('./chess_pictuers/*.bmp')
     img = None
     for fname in images:
         img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
@@ -161,8 +160,8 @@ class CalibrationWidget(QWidget):
         self.robot.network.msgManager.NetworkCmdSignal.connect(self.cmds_handler)
         self.cfg = cfg
         self.canMove = False # 机器人能否运动
-        self.robotMovePos = []  # 解析的机器人移动点为将会被保存到此处
-        self.parse_robot_move()
+        self.robotMovePos = []  # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
+        #self.parse_robot_move()
         self.posCnt = 0 # 用于记录当前发送到哪一个点了
         self.parent = parent
 
@@ -209,19 +208,36 @@ class CalibrationWidget(QWidget):
             sleep(2)
             self.robot.request_move()
 
-    def calibration(self):
-        print('calibrating!!!!!')
-        pass
-
-    def parse_robot_move(self):
+    def calibration(self, grid=(11, 8), width=35):
         """
-        解析CFG文件中的RobotMovePos
+        :param grid: 棋盘格数量
+        :param width: 棋盘格宽度(mm)
+        1. 打开所有图像文件
+        2. 相机标定, 返回外参数矩阵
+        3. 手眼标定
+        NOTE: 有两个相机，因此需要标定两次。
         :return:
         """
-        robotMovePosMap = self.cfg['HandEyeCalibration_Conf']
-        for key in robotMovePosMap:
-            if 'RobotMovePos' in key:
-                pos = [float(x) for x in robotMovePosMap[key].split(',')]
-                self.robotMovePos.append(pos)
+        for whichCamera in ['Left', 'Right']:
+            for i in range(len(self.robotMovePos)):
+                images = glob.glob(f'../CalibrationImages/{whichCamera}-*.png')
+                images = sorted(images)  # 必须要按照编号顺序，因为要与机械臂末端位置一一对应
+                mtx, dist, tvec, rvec = camera_calibration(images=images)
+                # 将一一计算出来的外参数转换成手眼标定能够识别的矩阵
+
+
+
+
+
+    #def parse_robot_move(self):
+    #    """
+    #    解析CFG文件中的RobotMovePos
+    #    :return:
+    #    """
+    #    robotMovePosMap = self.cfg['HandEyeCalibration_Conf']
+    #    for key in robotMovePosMap:
+    #        if 'RobotMovePos' in key:
+    #            pos = [float(x) for x in robotMovePosMap[key].split(',')]
+    #            self.robotMovePos.append(pos)
 
 

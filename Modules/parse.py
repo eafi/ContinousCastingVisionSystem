@@ -40,7 +40,7 @@ class CfgManager(QObject):
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
         parse_network(self)
-        parse_robot_camera_matrix(self)
+        parse_robot_camera_matrix(self) # 解析标定结果矩阵
 
 
 def parse_cfg(path: str):
@@ -110,9 +110,24 @@ def parse_target_ref(obj):
         obj.cfg['RectRef2Target_Conf'][key] = m
 
 def parse_robot_camera_matrix(obj):
+    """
+    1. 解析手眼标定结果
+    2. 相机内参数和k3畸变结果
+    :param obj:
+    :return:
+    """
     assert 'HandEyeCalibration_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find HandEyeCalibration Configuration.'))
-    obj.cfg['HandEyeCalibration_Conf']['HandEyeMatrix'] = np.array([float(x)  \
-                for x in obj.cfg['HandEyeCalibration_Conf']['HandEyeMatrix'].split(',')]).reshape(4,4)
+    for key in obj.cfg['HandEyeCalibration_Conf']:
+        obj.cfg['HandEyeCalibration_Conf'][key] = np.array([float(x)  \
+                    for x in obj.cfg['HandEyeCalibration_Conf'][key].split(',')])
+        if 'CameraMatrix' in key:
+            obj.cfg['HandEyeCalibration_Conf'][key] = \
+                obj.cfg['HandEyeCalibration_Conf'][key].reshape(3, 3)
+        elif 'HandEyeMatrix' in key:
+            obj.cfg['HandEyeCalibration_Conf'][key] = \
+                obj.cfg['HandEyeCalibration_Conf'][key].reshape(4, 4)
+
+
 
 
 
