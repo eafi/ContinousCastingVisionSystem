@@ -1,7 +1,9 @@
-torch==1.9.0
-numpy==1.21.2
-opencv_python==4.5.3.56
-Cython==0.29.25
-matplotlib==3.5.0
+Cython==0.29.28
+harvesters==1.3.4
+matplotlib==3.5.1
+numpy==1.22.3
+opencv_python==4.5.5.64
 Pillow==9.0.1
 PyQt5==5.15.6
+scipy==1.8.0
+torch==1.11.0
