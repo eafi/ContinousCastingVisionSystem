@@ -15,6 +15,7 @@ from Modules.Detection_1.utils.PnP import *
 from PyQt5.QtCore import pyqtSignal, QThread, QMutex
 from Modules.TargetObj import TargetObj
 from Modules.Robot import Robot
+from Modules.utils import vecs2trans
 from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 from time import sleep
 from cv2 import Rodrigues
@@ -210,11 +211,7 @@ class CoreSystem(QThread):
         rectPtsRef = get_four_points()
         # 得到目标板在相机坐标系下
         imgpts, rvec, tvec = pnp(rect, objp=rectPtsRef)
-        rotateMatrix, jac = Rodrigues(rvec)
-        camera2rect = np.zeros((4, 4))
-        camera2rect[:3,:3] = rotateMatrix
-        camera2rect[:3, 3] = tvec.reshape(1, -1)
-        camera2rect[3,3] = 1.0
+        camera2rect = vecs2trans(rvec=rvec, tvec=tvec)
 
         robot2Camera = self.cfg['HandEyeCalibration_Conf']['HandEyeMatrix']
         robot2Target = robot2Camera @ camera2rect @ rect2Target

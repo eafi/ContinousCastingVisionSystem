@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import glob
 from time import sleep
+from Modules.utils import vecs2trans
 
 
 def skew(v):
@@ -11,7 +12,7 @@ def skew(v):
                      [-v[1], v[0], 0]])
 
 
-def hand_eye_calibration(A, C, flag):
+def hand_eye_calibration(A, C, flag=1):
     #  ------手眼标定函数, 两种情况，0、眼在手上；1、眼在手外
     #  机械臂末端到基坐标系的位姿转换矩阵     A ---- (4 * n, 4)
     #  相机到标定板的位姿变换矩阵,相机外参    C ---- (4 * n, 4)
@@ -160,7 +161,9 @@ class CalibrationWidget(QWidget):
         self.robot.network.msgManager.NetworkCmdSignal.connect(self.cmds_handler)
         self.cfg = cfg
         self.canMove = False # 机器人能否运动
-        self.robotMovePos = []  # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
+        # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
+        # p0 = x, y, z, al, be, ga
+        self.robotMovePos = []
         #self.parse_robot_move()
         self.posCnt = 0 # 用于记录当前发送到哪一个点了
         self.parent = parent
@@ -219,25 +222,29 @@ class CalibrationWidget(QWidget):
         :return:
         """
         for whichCamera in ['Left', 'Right']:
-            for i in range(len(self.robotMovePos)):
-                images = glob.glob(f'../CalibrationImages/{whichCamera}-*.png')
-                images = sorted(images)  # 必须要按照编号顺序，因为要与机械臂末端位置一一对应
-                mtx, dist, tvec, rvec = camera_calibration(images=images)
-                # 将一一计算出来的外参数转换成手眼标定能够识别的矩阵
+            images = glob.glob(f'../CalibrationImages/{whichCamera}-*.png')
+            images = sorted(images)  # 必须要按照编号顺序，因为要与机械臂末端位置一一对应
+            mtx, dist, rvecs, tvecs = camera_calibration(images=images)
+            # 将一一计算出来的外参数转换成手眼标定能够识别的矩阵
+            rvecs = np.array(rvecs).squeeze()
+            tvecs = np.array(tvecs).squeeze()
+            C = []
+            for rvec, tvec in zip(rvecs, tvecs):
+                trans = vecs2trans(rvec=rvec, tvec=tvec) # 向量转矩阵
+                C.append(trans)
+            C = np.array(C).reshape(-1, 4)
+            A = []
+            for pts in self.robotMovePos:
+                tvec = np.array(pts[:3])
+                rvec = np.array(pts[3:])
+                trans = vecs2trans(rvec=rvec, tvec=tvec)
+                A.append(trans)
+            A = np.array(A).reshape(-1, 4)
+            # 手眼标定
+            hand_eye_calibration(A, C)
 
 
 
 
-
-    #def parse_robot_move(self):
-    #    """
-    #    解析CFG文件中的RobotMovePos
-    #    :return:
-    #    """
-    #    robotMovePosMap = self.cfg['HandEyeCalibration_Conf']
-    #    for key in robotMovePosMap:
-    #        if 'RobotMovePos' in key:
-    #            pos = [float(x) for x in robotMovePosMap[key].split(',')]
-    #            self.robotMovePos.append(pos)
 
 
