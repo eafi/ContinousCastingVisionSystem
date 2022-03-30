@@ -21,11 +21,11 @@ class TargetObj(QObject):
         :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
         :param trans: 用于保存估计得到的目标变换矩阵，可能是list也可能是单个矩阵
         """
-        self.momentum = deque(maxlen=10)
+        self.momentum = deque(maxlen=20)
         self.momentum.append(rect)
         self.isStable = False
 
-        self.trans = deque(maxlen=10)
+        self.trans = deque(maxlen=20)
         self.trans.append(trans)
 
 
@@ -34,13 +34,13 @@ class TargetObj(QObject):
         刷新目标坐标
         :return:
         """
-        if np.linalg.norm(rect-self.momentum[0], ord=1) < 0.5:
+        self.momentum.append(rect)
+        self.trans.append(trans)
+        if np.var(self.momentum) < 0.01:
             # 标定板静止
             self.isStable = True
         else:
             self.isStable = False
-        self.momentum.append(rect)
-        self.trans.append(trans)
 
 
     def avg(self):

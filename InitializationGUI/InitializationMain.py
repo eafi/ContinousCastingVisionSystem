@@ -6,11 +6,9 @@ Email: imeafi@gmail.com
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout
-from PyQt5.QtCore import QObject
-from distanceVofCheck import DistanceVOFCheck
 from Modules.parse import CfgManager
 from InitializationCameraWidget import InitializationCameraWidget
-from InitializationGUI.calibration import CalibrationWidget
+from Modules.calibration import CalibrationWidget
 from harvesters.core import Harvester
 from platform import system
 

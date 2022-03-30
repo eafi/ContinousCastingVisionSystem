@@ -16,7 +16,6 @@ import queue
 
 class AbstractMsg(QObject):
     # 向绑定用户发送控制字符以及数据，然后接受缓存
-    NetworkCmdSignal = pyqtSignal(int, list, list)
     def __init__(self):
         """
         抽象数据包，用于维护接受和发送的数据包解析和发送工作.
@@ -30,16 +29,17 @@ class AbstractMsg(QObject):
         self.codenFormat_ = "I6f3I"
 
         # 解码时使用了大端序，最简单的方法是将接收到的二进制直接逆转，但此时数据结构也会逆转.
-        self.decodenFormat_ = "3I6fI"
+        #self.decodenFormat_ = "3I6fI"
+        self.decodenFormat_ = "I6f3I"
 
 
     def parse(self, data):
         if data and len(data) == 40:
-            data = data[::-1]
+            #data = data[::-1]
             data = list(struct.unpack(self.decodenFormat_, data))
             self.recCtlBits, self.recData, self.recResBits = data[0], data[1:-3], data[-3:]
             print('[Info] Recv:', self.recCtlBits, self.recData, self.recResBits)
-            self.NetworkCmdSignal.emit(self.recCtlBits, self.recData, self.recResBits)
+            return self.recCtlBits, self.recData, self.recResBits
 
 
     def pack(self, ctl, data, res):
@@ -79,8 +79,9 @@ class Network(QThread):
         self.msgManager = AbstractMsg()
         # 用于保存PLC连接的套接子，所有相关指令将通过该文件发送。读取并不需要单独管理.
         self.connectSocket = None
-        self.lstCtl = None  # 上一次的指令
-        self.lstData = None  # 上一次的数据，防止反复发送
+        self.ctlBit = None
+        self.data = None
+        self.resBit = None
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
@@ -111,7 +112,7 @@ class Network(QThread):
                                 data, s.getpeername()), file=sys.stderr)
                             #message_queues[s].put(data)
                             # 解析新来的数据，并保存到msgManager中
-                            self.msgManager.parse(data)
+                            self.ctlBit, self.data, self.resBit = self.msgManager.parse(data)
                             #if s not in outputs:
                             #    outputs.append(s)
                         else: # 没有数据
@@ -145,7 +146,6 @@ class Network(QThread):
 
 
     def send(self, ctl, data, res):
-        sleep(0.5) # 注意如果没有这个，可能会导致缓存崩溃
         try:
             if self.connectSocket is not None: # 存在PLC链接
                 msg_to_send = self.msgManager.pack(ctl, data, res)

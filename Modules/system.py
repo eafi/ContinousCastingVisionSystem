@@ -58,7 +58,6 @@ class CoreSystem(QThread):
             elif self.coreSystemState == 0:  # 初始化成功状态，等待TCP请求
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
                 self.isDetecting = False
-
 #####################################################################################################
 #################################### PLC 请求相应函数 #################################################
 #####################################################################################################
@@ -66,7 +65,7 @@ class CoreSystem(QThread):
                 self.isDetecting = True
                 m = None
                 if 'LeftCameraTopROI' in self.targetObjs:
-                    m = self.targetObjs['LeftCameraLeftROI'].avg()
+                    m = self.targetObjs['LeftCameraTopROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(1)
                     self.robot.set_move(m)
@@ -130,10 +129,11 @@ class CoreSystem(QThread):
         self.detectThread = []
        # # 机器人通讯资源
         self.robot = Robot(cfg=self.cfg)
-        self.robot.run() # 不停发送系统状态
-        #self.robot.network.msgManager.NetworkCmdSignal.connect(self.cmds_handler)
+        self.robot.start() # 不停发送系统状态
+        self.robot.systemStateChange.connect(self.core_sys_state_change)
 
-
+    def core_sys_state_change(self, state):
+        self.coreSystemState = state
 
     def threads_check(self, threads, maxNum):
         """

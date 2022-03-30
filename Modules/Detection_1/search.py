@@ -235,7 +235,7 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
             #LOG(log_types.OK, 'found rect.')
             return rect+np.array((-padding_board+left_top_x, -padding_board+left_top_y)) # 回到src_img的全局坐标系下
     #cv2.imshow('[WARN] No Rect Found!', bgr_roi_img)
-    #LOG(log_types.NOTICE, 'no rect found.')
+    LOG(log_types.NOTICE, 'no rect found.')
     return rect
 
 
