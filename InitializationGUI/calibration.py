@@ -232,7 +232,6 @@ class CalibrationWidget(QWidget):
             for rvec, tvec in zip(rvecs, tvecs):
                 trans = vecs2trans(rvec=rvec, tvec=tvec) # 向量转矩阵
                 C.append(trans)
-            C = np.array(C).reshape(-1, 4)
             A = []
             for pts in self.robotMovePos:
                 tvec = np.array(pts[:3])

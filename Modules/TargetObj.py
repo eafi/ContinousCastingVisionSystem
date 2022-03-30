@@ -16,32 +16,36 @@ from collections import deque
 
 
 class TargetObj(QObject):
-    def __init__(self, m):
+    def __init__(self, rect,trans):
         """
-        :param trans: 第一次检测到的偏移量
-        :param eular: 第一次检测到的Eular转角
+        :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
+        :param trans: 用于保存估计得到的目标变换矩阵，可能是list也可能是单个矩阵
         """
         self.momentum = deque(maxlen=10)
-        self.momentum.append(m)
+        self.momentum.append(rect)
         self.isStable = False
 
+        self.trans = deque(maxlen=10)
+        self.trans.append(trans)
 
-    def step(self, m):
+
+    def step(self, rect, trans):
         """
         刷新目标坐标
         :return:
         """
-        if np.linalg.norm(m-self.momentum[0], ord=1) < 0.5:
+        if np.linalg.norm(rect-self.momentum[0], ord=1) < 0.5:
             # 标定板静止
             self.isStable = True
         else:
             self.isStable = False
-        self.momentum.append((m))
+        self.momentum.append(rect)
+        self.trans.append(trans)
 
 
     def avg(self):
         if self.isStable:
-            m = np.mean(self.momentum, axis=0)
+            m = np.mean(self.trans, axis=0)
             return m
         # 标定板正在运动，不能返回
         return None

@@ -129,9 +129,6 @@ def parse_robot_camera_matrix(obj):
 
 
 
-
-
-
 def parse_roi_rect(obj):
     """
     对CFG文件的ROI rects进行解析.
@@ -158,6 +155,7 @@ def parse_network(obj):
         if key == 'PORT':
             obj.cfg['Network_Conf'][key] = int(obj.cfg['Network_Conf']['PORT'])
         elif key != 'IP':
+            # 对其余Network指令进行uint32解码
             obj.cfg['Network_Conf'][key] = int(obj.cfg['Network_Conf'][key], 16)
 
 
@@ -204,6 +202,6 @@ def write_couple_cfg(couple: tuple, path='CONF.cfg'):
 
 
 if __name__ == "__main__":
-    #parse_cfg('CONF.cfg')
+    manager = CfgManager('../CONF.cfg')
 
     pass
