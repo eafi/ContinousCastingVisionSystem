@@ -1,89 +1,136 @@
-from PyQt5.QtWidgets import QWidget, QMessageBox
+from PyQt5.QtWidgets import QWidget, QMessageBox, QPushButton, QHBoxLayout, QTextEdit, QVBoxLayout
 from Modules.Robot import Robot
-import glob
-from Modules.utils import vecs2trans
 from Modules.LOG import *
 import cv2
-from Modules.calibration import camera_calibration, hand_eye_calibration
-import numpy as np
 from PyQt5.QtCore import QThread
+from Modules.calibration import calibration
+import os
 
-class CalibrationWidget(QWidget):
-    """
-    联合标定： 相机标定 + 机械臂手眼标定. 需要提供机械臂末端的姿态信息
-    :return:
-    """
+class CalibrateWidget(QWidget):
+    def __init__(self):
+        super(CalibrateWidget, self).__init__()
+        self.initUI()
+
+    def initUI(self):
+        self.nextPosBtn = QPushButton(self.tr('Next\n Position'))
+        self.nextPosBtn.setFixedSize(80,80)
+        self.nextPosBtn.setDisabled(True)
+        self.captureBtn = QPushButton(self.tr('Capture'))
+        self.captureBtn.setFixedSize(80,80)
+        self.captureBtn.setDisabled(True)
+
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.nextPosBtn)
+        layout.addWidget(self.captureBtn)
+
+        layout2 = QVBoxLayout()
+        self.stateText = QTextEdit()
+        self.stateText.setReadOnly(True)
+        self.stateText.setText('Waiting for Robot.')
+        layout2.addLayout(layout)
+        layout2.addWidget(self.stateText)
+
+        self.setLayout(layout2)
+
+class Calibration(QThread):
     def __init__(self, cfg, parent):
-        super(CalibrationWidget, self).__init__()
+        super(Calibration, self).__init__()
         self.cfg = cfg
-        self.calibrate = Calibrate(cfg)
+        self.calibrateWidget = CalibrateWidget()
+        self.calibrateWidget.hide()
+        self.calibrateWidget.captureBtn.clicked.connect(self.slot_capture_btn)
+        self.calibrateWidget.nextPosBtn.clicked.connect(self.slot_next_pos_btn)
+        if os.path.exists('../CalibrationImages/pos.txt'):
+            os.remove('../CalibrationImages/pos.txt')
         self.parent = parent
-
-
-    def slot_init(self):
-        """
-        初始化标定，只在用户点击手眼标定后进行初始化工作
-        :return:
-        """
-        warningStr='Do you want to recalibrate the arm and the vision system?\n' \
-                   'You are supposed to do this process only if one of the followings happened:\n' \
-                   '1. This is a brand new system and have not calibrate yet.\n' \
-                   '2. The relative position between cameras and the arm has been changed.\n' \
-                   '3. The focal length of cameras has been changed.\n' \
-                   'Before you click YES button please make sure the chessboard has been right installed on the' \
-                   'end of arm.\n\n\n' \
-                   'WARNING: THE ARM WILL MOVE AUTOMATICALLY DURING CALIBRATION.'
-
-        ret = QMessageBox.warning(self, self.tr('Warning!'),
-                                  self.tr(warningStr), QMessageBox.No, QMessageBox.Yes)
-
-        if ret == QMessageBox.Yes:
-            if self.robot.network.connectSocket is None:
-                LOG(log_types.NOTICE, self.tr('No Connection Yet.'))
-                return
-            self.calibrate.start()
-
-
-
-class Calibrate(QThread):
-    def __init__(self, cfg):
-        super(Calibrate, self).__init__()
-
         self.robot = Robot(cfg)
         self.robot.start()
         self.robot.systemStateChange.connect(self.init_system_state_change)
         # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
         # p0 = x, y, z, al, be, ga
         self.robotMovePos = []
-        #self.parse_robot_move()
+        self.robotRealPos = [] # 真实末端位置（来自PLC）
+        self.parse_robot_move_pos_to_list()
         self.posCnt = 0 # 用于记录当前发送到哪一个点了
         self.calibrateState = -1  # init初始化态： 检查网络并且等待Robot空闲
+
+
+    def show_text_state(self, txt):
+        self.calibrateWidget.stateText.setText(txt)
         pass
+
+
+    def slot_next_pos_btn(self):
+        if self.posCnt < len(self.robotMovePos):
+            self.show_text_state(f'Robot is moving to pos{self.posCnt}')
+            self.robot.set_move_vec(self.robotMovePos[self.posCnt])
+            self.robot.set_calibrate_req(self.posCnt)  # 发送标定请求
+            self.robot.set_request_camera_calibrate('Calibrating')
+        else:
+            calibration(self.robotRealPos)
+
+
+    def slot_capture_btn(self):
+        cv2.imwrite(f'../CalibrationImages/Left-{self.posCnt}.png', self.parent.leftCamera.im_np)
+        cv2.imwrite(f'../CalibrationImages/Right-{self.posCnt}.png', self.parent.rightCamera.im_np)
+        self.posCnt += 1
+        self.calibrateState = 1
 
     def run(self):
         while True:
             if self.calibrateState == -1:  # 初始状态，检查网络
-                LOG(log_types.NOTICE, self.tr('Waitting for Robot.'))
+                # 只有当机器人是空闲状态时才能离开此状态
+                LOG(log_types.NOTICE, self.tr('Waiting for Robot.'))
+                #self.show_text_state('Waiting for Robot.')
 
             elif self.calibrateState == 0:  # 发送标定请求
-                print('reqeust to calibratin!!!')
+                # 只有当机器人返回允许标定才能离开此状态
                 self.robot.set_request_camera_calibrate('Request')  # 请求标定
 
             elif self.calibrateState == 1:  # 准备开始标定
-                self.robot.set_move(self.robotMovePos[self.posCnt])
-                self.robot.set_calibrate_req(self.posCnt)  # 发送标定请求
-                self.robot.set_request_camera_calibrate('Calibrating')
+                self.calibrateWidget.nextPosBtn.setEnabled(True)
+                self.calibrateWidget.captureBtn.setDisabled(True)
 
-    def init_system_state_change(self, state):
+            elif self.calibrateState == 2: # 机械臂移动到位
+                self.calibrateWidget.captureBtn.setDisabled(False)
+                self.calibrateWidget.nextPosBtn.setDisabled(True)
+
+
+
+    def init_system_state_change(self, state, datalst):
         print('in state! ', state)
         if state == 0x10:
             # 机器人空闲--> 准备请求标定
             self.calibrateState = 0
+            self.show_text_state('Request Robot to calibrate.')
         elif state == 0x11:
             # 机器人标定允许 -->  准备开始标定
+            self.show_text_state('Robot is ready to calibrate.')
             self.calibrateState = 1
         else:
             if state - 0x12 == self.posCnt: # 机械臂到位
-                cv2.imwrite(f'../CalibrationImages/Left-{self.posCnt}.png', self.parent.leftCamera.im_np)
-                cv2.imwrite(f'../CalibrationImages/Right-{self.posCnt}.png', self.parent.rightCamera.im_np)
-                self.posCnt += 1
+                self.calibrateState = 2
+                self.show_text_state(f'Robot moved to pos{self.posCnt},{datalst[0]},{datalst[1]},{datalst[2]}.')
+                with open('../CalibrationImages/pos.txt', 'a') as f:
+                    for data in datalst:
+                        f.write(str(data)+',')
+                    f.write('\n')
+                    f.close()
+                self.robotRealPos.append(datalst)
+
+    def parse_robot_move_pos_to_list(self):
+        movPosMap = self.cfg['HandEyeCalibration_Conf']
+        for key in movPosMap:
+            if 'RobotMovePos' in key:
+                self.robotMovePos.append(movPosMap[key])
+
+import numpy as np
+if __name__ == '__main__':
+    # 离线标定
+    pos_file = '../CalibrationImages/pos.txt'
+    if os.path.exists(pos_file):
+        with open('../CalibrationImages/pos.txt', 'r') as f:
+            lines = f.readlines()
+            lines = [np.array(x.split(',')[:-1], np.float32).reshape(1, -1) for x in lines]
+            calibration(lines)

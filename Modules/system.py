@@ -68,7 +68,7 @@ class CoreSystem(QThread):
                     m = self.targetObjs['LeftCameraTopROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(1)
-                    self.robot.set_move(m)
+                    self.robot.set_move_mat(m)
             elif self.coreSystemState == 2:  # PLC命令启动检测，返回水口安装坐标
                 self.isDetecting = True
                 m = None
@@ -78,7 +78,7 @@ class CoreSystem(QThread):
                     m = self.targetObjs['LeftCameraRightROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(2)
-                    self.robot.set_move(m[0])
+                    self.robot.set_move_mat(m[0])
             elif self.coreSystemState == 3: # 请求滑板液压缸坐标
                 self.isDetecting = True
                 m = None
@@ -88,7 +88,7 @@ class CoreSystem(QThread):
                     m = self.targetObjs['LeftCameraRightROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(3)
-                    self.robot.set_move(m[1])
+                    self.robot.set_move_mat(m[1])
             elif self.coreSystemState == 4: # 请求水口坐标
                 self.isDetecting = True
                 m = None
@@ -96,7 +96,7 @@ class CoreSystem(QThread):
                     m = self.targetObjs['LeftCameraBottomROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(4)
-                    self.robot.set_move(m)
+                    self.robot.set_move_mat(m)
 
 
 
@@ -132,7 +132,7 @@ class CoreSystem(QThread):
         self.robot.start() # 不停发送系统状态
         self.robot.systemStateChange.connect(self.core_sys_state_change)
 
-    def core_sys_state_change(self, state):
+    def core_sys_state_change(self, state, datalst):
         self.coreSystemState = state
 
     def threads_check(self, threads, maxNum):

@@ -143,9 +143,11 @@ def camera_calibration(images, grid=(11, 8), width=35):
     print("total error: {}".format(mean_error / len(objpoints)))
     return mtx, dist, rvecs, tvecs
 
-
-def calibration(self, grid=(11, 8), width=35):
+import glob
+from Modules.utils import vecs2trans
+def calibration(robotPos, grid=(11, 8), width=35):
     """
+    :param robotMovePos: 机械臂移动末端位置
     :param grid: 棋盘格数量
     :param width: 棋盘格宽度(mm)
     1. 打开所有图像文件
@@ -165,8 +167,9 @@ def calibration(self, grid=(11, 8), width=35):
         for rvec, tvec in zip(rvecs, tvecs):
             trans = vecs2trans(rvec=rvec, tvec=tvec) # 向量转矩阵
             C.append(trans)
+        C = np.array(C).reshape(-1, 4)
         A = []
-        for pts in self.robotMovePos:
+        for pts in robotPos:
             tvec = np.array(pts[:3])
             rvec = np.array(pts[3:])
             trans = vecs2trans(rvec=rvec, tvec=tvec)

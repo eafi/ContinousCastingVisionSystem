@@ -5,10 +5,10 @@ Email: imeafi@gmail.com
 """
 
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QMessageBox
 from Modules.parse import CfgManager
 from InitializationCameraWidget import InitializationCameraWidget
-from Modules.calibration import CalibrationWidget
+from CalibrateWidget import Calibration
 from harvesters.core import Harvester
 from platform import system
 
@@ -52,7 +52,7 @@ class MainGUI(QWidget):
 
 
         #============== Calibration =================
-        self.calibration = CalibrationWidget(cfg=self.cfgManager.cfg, parent=self)
+        self.calibration = Calibration(cfg=self.cfgManager.cfg, parent=self)
 
         cameraLayout = QHBoxLayout()
         cameraLayout.addWidget(self.leftCamera)
@@ -70,7 +70,27 @@ class MainGUI(QWidget):
         self.btn1.clicked.connect(self.leftCamera.slot_draw_mininum_rects)
         self.btn1.clicked.connect(self.rightCamera.slot_draw_mininum_rects)
 
-        self.btn2.clicked.connect(self.calibration.slot_init)
+        #self.btn2.clicked.connect(self.calibration.slot_init)
+        self.btn2.clicked.connect(self.slot_calibrate_btn)
+
+
+    def slot_calibrate_btn(self):
+        warningStr='Do you want to recalibrate the arm and the vision system?\n' \
+                   'You are supposed to do this process only if one of the followings happened:\n' \
+                   '1. This is a brand new system and have not calibrate yet.\n' \
+                   '2. The relative position between cameras and the arm has been changed.\n' \
+                   '3. The focal length of cameras has been changed.\n' \
+                   'Before you click YES button please make sure the chessboard has been right installed on the' \
+                   'end of arm.\n\n\n' \
+                   'WARNING: THE ARM WILL MOVE AUTOMATICALLY DURING CALIBRATION.'
+
+        ret = QMessageBox.warning(self, self.tr('Warning!'),
+                                  self.tr(warningStr), QMessageBox.No, QMessageBox.Yes)
+
+        if ret == QMessageBox.Yes:
+            self.calibration.calibrateWidget.show()
+            self.calibration.start()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
