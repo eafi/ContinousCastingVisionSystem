@@ -24,9 +24,17 @@ from harvesters.core import Harvester
 from platform import system
 
 
+class initClass:
+    cfgInit = False
+    cameraInit = False
+    torchInit = False
+    robotInit = False
+
+
 class CoreSystem(QThread):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
     resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定:当资源分配成功后才能启动GUI
+
     def __init__(self):
         super(CoreSystem, self).__init__()
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
@@ -35,8 +43,6 @@ class CoreSystem(QThread):
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
         self.isDetecting = False
-
-
 
     def run(self):
         """
@@ -58,9 +64,9 @@ class CoreSystem(QThread):
             elif self.coreSystemState == 0:  # 初始化成功状态，等待TCP请求
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
                 self.isDetecting = False
-#####################################################################################################
-#################################### PLC 请求相应函数 #################################################
-#####################################################################################################
+            #####################################################################################################
+            #################################### PLC 请求相应函数 #################################################
+            #####################################################################################################
             elif self.coreSystemState == 1:  # PLC命令启动检测,返回能源介质接头坐标
                 self.isDetecting = True
                 m = None
@@ -79,7 +85,7 @@ class CoreSystem(QThread):
                 if m is not None:
                     self.robot.set_system_mode(2)
                     self.robot.set_move_mat(m[0])
-            elif self.coreSystemState == 3: # 请求滑板液压缸坐标
+            elif self.coreSystemState == 3:  # 请求滑板液压缸坐标
                 self.isDetecting = True
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
@@ -89,7 +95,7 @@ class CoreSystem(QThread):
                 if m is not None:
                     self.robot.set_system_mode(3)
                     self.robot.set_move_mat(m[1])
-            elif self.coreSystemState == 4: # 请求水口坐标
+            elif self.coreSystemState == 4:  # 请求水口坐标
                 self.isDetecting = True
                 m = None
                 if 'LeftCameraBottomROI' in self.targetObjs:
@@ -98,39 +104,54 @@ class CoreSystem(QThread):
                     self.robot.set_system_mode(4)
                     self.robot.set_move_mat(m)
 
-
-
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
         :return:
         """
-
         # 读取CFG文件夹
-        self.cfgManager = CfgManager(path='CONF.cfg')
-        self.cfg = self.cfgManager.cfg
-
+        self.core_resource_cfg()
         # 分配相机资源
-        self.h = Harvester()
-        if system() == 'Linux':
-            self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
-        else:
-            self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
-        self.h.update()
-        LOG(log_types.NOTICE, self.tr('Camera List: '))
-        print(self.h.device_info_list)
-        self.camera_1 = self.h.create_image_acquirer(0)
-        self.camera_2 = self.h.create_image_acquirer(1)
-        self.camera_1.start()
-        self.camera_2.start()
-
+        self.core_resource_cameras()
         # CUDA状态
-        import torch
-        self.cuda_available = torch.cuda.is_available()  # Status状态：cuda
-        self.detectThread = []
-       # # 机器人通讯资源
-        self.robot = Robot(cfg=self.cfg)
-        self.robot.start() # 不停发送系统状态
-        self.robot.systemStateChange.connect(self.core_sys_state_change)
+        self.core_resource_torch()
+        # 机器人通讯资源
+        self.core_resource_robot()
+
+    def core_resource_cfg(self):
+        if not initClass.cfgInit:
+            self.cfgManager = CfgManager(path='CONF.cfg')
+            self.cfg = self.cfgManager.cfg
+            initClass.cfgInit = True
+
+    def core_resource_cameras(self):
+        if not initClass.cameraInit:
+            self.h = Harvester()
+            if system() == 'Linux':
+                self.h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+            else:
+                self.h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
+            self.h.update()
+            LOG(log_types.NOTICE, self.tr('Camera List: '))
+            print(self.h.device_info_list)
+            self.camera_1 = self.h.create_image_acquirer(0)
+            self.camera_2 = self.h.create_image_acquirer(1)
+            self.camera_1.start()
+            self.camera_2.start()
+            initClass.cameraInit = True
+
+    def core_resource_torch(self):
+        if not initClass.torchInit:
+            import torch
+            self.cuda_available = torch.cuda.is_available()  # Status状态：cuda
+            self.detectThread = []
+            initClass.torchInit = True
+
+    def core_resource_robot(self):
+        if not initClass.robotInit:
+            self.robot = Robot(cfg=self.cfg)
+            self.robot.start()  # 不停发送系统状态
+            self.robot.systemStateChange.connect(self.core_sys_state_change)
+            initClass.robotInit = True
 
     def core_sys_state_change(self, state, datalst):
         self.coreSystemState = state
@@ -149,7 +170,6 @@ class CoreSystem(QThread):
         threads = newThreads
         return True if len(newThreads) < maxNum else False
 
-
     def threads_return_slot(self, description: str, rect: np.ndarray):
         """
         处理线程返回结果:
@@ -162,7 +182,7 @@ class CoreSystem(QThread):
         """
         if rect.size == 0:
             pass
-            #LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
+            # LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
         else:
             LOG(log_types.OK, self.tr('In ' + description + ' found rect!'))
             # 从ROI到相机全幅图像的坐标偏移
@@ -178,8 +198,7 @@ class CoreSystem(QThread):
                 # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
                 self.targetObjs[description].step(rect, robot2Target)
 
-            self.targetFoundSignal.emit(description, rect) # 与CameraWidget有关，用于绘制Target
-
+            self.targetFoundSignal.emit(description, rect)  # 与CameraWidget有关，用于绘制Target
 
     def detect(self, state: str):
         """
@@ -199,8 +218,6 @@ class CoreSystem(QThread):
                     self.detectThread.append(tmpThread)
                     tmpThread.start()
 
-
-
     def target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
         """
         目标估计: 根据标定板的物理尺度进行PnP计算, 然后根据CFG刚体矩阵转换到目标抓取位置，最后根据手眼标定矩阵转换到机器人坐标系
@@ -217,8 +234,8 @@ class CoreSystem(QThread):
         if whichTarget == 'LeftRef' or whichTarget == 'RightRef':
             # 左右参考标定板代表了两个坐标：水口安装位置 + 滑板液压缸安装位置，因此需要保存两个矩阵
             rect2Target = []
-            rect2Target.append(self.cfg['RectRef2Target_Conf'][whichTarget+'1'])
-            rect2Target.append(self.cfg['RectRef2Target_Conf'][whichTarget+'2'])
+            rect2Target.append(self.cfg['RectRef2Target_Conf'][whichTarget + '1'])
+            rect2Target.append(self.cfg['RectRef2Target_Conf'][whichTarget + '2'])
         else:
             rect2Target = self.cfg['RectRef2Target_Conf'][whichTarget]
         # 目标板已知绝对物理尺寸(在目标板左上角圆心为原点的坐标系下)
@@ -237,4 +254,3 @@ class CoreSystem(QThread):
             robot2Target = robot2Camera @ camera2rect @ rect2Target
 
         return robot2Target
-
