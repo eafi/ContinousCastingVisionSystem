@@ -61,11 +61,11 @@ class Detection1(QThread):
         """
         self.parse_cfg()
         srcF = self.img.astype(np.float32)
-        srcScaled = srcF[::4, ::4]
+        srcScaled = srcF[::2, ::2]
         # 缩小图快速排查rect
-        rect = search(src_img=srcScaled, roi_size=0, board_size_range=[20, 50, 1], kernel_size=(50, 50),
-                      outer_diameter_range=(5, 25),
-                      ring_width_range=(1, 5), epsilon_dst=3, ring_threshold=[0.3, 0.9, 0.1])
+        rect = search(src_img=srcScaled, roi_size=0, board_size_range=[50, 100, 5], kernel_size=(50, 50),
+                      outer_diameter_range=(10, 40),
+                      ring_width_range=(1, 5), epsilon_dst=3, ring_threshold=[0.3, 0.8, 0.1])
         # 真正检查图像逻辑
         if rect.size != 0:
             rect = search(src_img=self.img, **self.kargs)

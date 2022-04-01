@@ -6,7 +6,11 @@ Email: imeafi@gmail.com
 实现对输入图像进行标定板查找，并返回所寻找到的四个圆心位置。以(left-top, right-top, right-bottom, left-bottom)顺序输出像素坐标.
 主函数为 search()
 """
+import glob
 import sys
+
+import cv2
+
 sys.path.append('/home/eafi/projects/py-projects/Qt1')
 from itertools import combinations
 from Modules.Detection_1.utils.math_utils import *
@@ -224,15 +228,15 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
                 acc_img = threshold_output[0]
             else:
                 acc_img = acc_img | threshold_output[i] # 整合所有检查结果
-            #cv2.imshow('filter', threshold_output[i].astype(np.uint8)*255)
-            #cv2.imshow('output', np.array(output[i] * 255.0, dtype=np.uint8))
-            #cv2.imshow('acc', np.array(acc_img, dtype=np.uint8)*255)
-            #cv2.waitKey(20)
+            cv2.imshow('filter', threshold_output[i].astype(np.uint8)*255)
+            cv2.imshow('output', np.array(output[i] * 255.0, dtype=np.uint8))
+            cv2.imshow('acc', np.array(acc_img, dtype=np.uint8)*255)
+            cv2.waitKey(20)
         acc_img = acc_img.astype(np.uint8)*255
         points = search_4_points(acc_img=acc_img, pts_type=pts_type, area_threshold=area_threshold)
         rect = search_rect(points=points, img=acc_img, epsilon_k=epsilon_k, epsilon_dst=epsilon_dst) # (x, y)
         if rect.size != 0:
-            #LOG(log_types.OK, 'found rect.')
+            LOG(log_types.OK, 'found rect.')
             return rect+np.array((-padding_board+left_top_x, -padding_board+left_top_y)) # 回到src_img的全局坐标系下
     #cv2.imshow('[WARN] No Rect Found!', bgr_roi_img)
     LOG(log_types.NOTICE, 'no rect found.')
@@ -278,7 +282,42 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
 #    #search(src_img)
 #
 #
-#if __name__ == '__main__':
-#    print('hello')
-#    parse_argv()
+if __name__ == '__main__':
+    print('hello')
+    img_path = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
+    img_files = glob.glob(img_path+'/*.png')
+    for img in img_files:
+        img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
+        roi = img[400:650, 650:900] # LeftROI
+        bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
+
+        cv2.imshow('roi', roi)
+        srcScaled = roi[::2, ::2]
+        cv2.imshow('scaledroi', srcScaled)
+
+        bgr_src = cv2.cvtColor(srcScaled, cv2.COLOR_GRAY2BGR)
+        roi = roi.astype(np.float32)
+        srcScaled = srcScaled.astype(np.float32)
+        cv2.waitKey(0)
+        # 缩小图快速排查rect
+        rect = search(src_img=srcScaled, roi_size=0, board_size_range=[50, 100, 5], kernel_size=(50, 50),
+                      outer_diameter_range=(10, 40),
+                      ring_width_range=(1, 5), epsilon_dst=3, ring_threshold=[0.3, 0.8, 0.1])
+        if rect is not None:
+            cv2.line(srcScaled, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(srcScaled, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(srcScaled, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(srcScaled, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+            cv2.imshow('found', bgr_src)
+            cv2.waitKey(0)
+
+        rect = search(src_img=roi)
+        if rect is not None:
+            cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+            cv2.imshow('found', bgr_src)
+            cv2.waitKey(0)
+
 
