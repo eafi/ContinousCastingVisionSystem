@@ -13,8 +13,6 @@ class CoreSystemCameraWidget(BaseCameraWidget):
         super(CoreSystemCameraWidget, self).__init__(cfg=cfg, cameraType=cameraType, harvesters=harvesters)
         self.cfg = cfg
         self.rect = None  # 用于绘制Target
-        # 是否绘制ROIs
-        self.isDrawROIs = True
         # 是否绘制Targets
         self.isDrawTargets = True
 
@@ -27,18 +25,6 @@ class CoreSystemCameraWidget(BaseCameraWidget):
             painter = QPainter()
             painter.begin(self)
             oldPen = painter.pen()
-            windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
-            if self.isDrawROIs:
-                pen = QPen()
-                pen.setColor(Qt.red)
-                pen.setWidth(2)
-                painter.setPen(pen)
-                for key in self.cfg['ROIs_Conf']:
-                    if self.cameraType in key:
-                        rect = self.cfg['ROIs_Conf'][key]
-                        rect = rect[0]*self.ratioW, rect[1]*self.ratioH, rect[2]*self.ratioW, rect[3]*self.ratioH
-                        painter.drawRect(*rect)
-                        painter.drawText(QPointF(rect[0]*self.ratioW, rect[1]*self.ratioW), self.tr(key))
 
             # 绘制Target区域
             if self.isDrawTargets and self.rect is not None:

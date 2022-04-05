@@ -47,8 +47,8 @@ class MainGUI(QWidget):
         self.camera_2.start()
         self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'), harvesters=self.camera_1)
         self.rightCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('RightCamera'), harvesters=self.camera_2)
-        self.leftCamera.setFixedSize(self.leftCamera.w, self.leftCamera.h)
-        self.rightCamera.setFixedSize(self.rightCamera.w, self.rightCamera.h)
+        #self.leftCamera.setFixedSize(self.leftCamera.w, self.leftCamera.h)
+        #self.rightCamera.setFixedSize(self.rightCamera.w, self.rightCamera.h)
 
 
         #============== Calibration =================

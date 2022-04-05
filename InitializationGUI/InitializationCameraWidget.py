@@ -10,34 +10,11 @@ class InitializationCameraWidget(BaseCameraWidget):
     def __init__(self, cameraType, cfg, harvesters):
         super(InitializationCameraWidget, self).__init__(cfg=cfg, cameraType=cameraType, harvesters=harvesters)
         self.cfg = cfg
-        # Distance VOF检查: 绘制最小200x200的多个Rects
-        self.isDrawMininumRects = False
+
 
 
     def paintEvent(self, event):
         super(InitializationCameraWidget, self).paintEvent(event=event)
-        # ===========================================================================
-        # 按钮事件： 绘制最小矩形
-        # 首先绘制不动的最小矩形，数据来自于CFG文件，不动的最小矩形用于给用户参考
-        if self.isDrawMininumRects:
-            painter = QPainter()
-            painter.begin(self)
-            oldPen = painter.pen()
-            pen = QPen()
-            pen.setColor(Qt.red)
-            pen.setWidth(4)
-            painter.setPen(pen)
-            windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
-            ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
-            ratioH = windowH / self.h
-            for key in self.cfg['ROIs_Conf']:
-                if self.cameraType in key:
-                    rect = self.cfg['ROIs_Conf'][key]
-                    rect = rect[0] * ratioW, rect[1] * ratioH, 200 * ratioW, 200 * ratioH
-                    painter.drawRect(*rect)
-                    painter.drawText(QPointF(rect[0] * ratioW, rect[1] * ratioH + 10), self.tr('Stay:'+key))
-            painter.setPen(oldPen)
-            painter.end()
 
 
     def show_moveable_rects(self):
@@ -46,15 +23,12 @@ class InitializationCameraWidget(BaseCameraWidget):
         :return:
         """
         self.movableRects = []
-        windowW, windowH = self.width(), self.height()  # 对窗口进行缩放，实时修正尺寸
-        ratioW = windowW / self.w  # 窗口 / 像素 <= 1.0
-        ratioH = windowH / self.h
         for key in self.cfg['ROIs_Conf']:
             if self.cameraType in key:
                 rect = self.cfg['ROIs_Conf'][key]
-                rect = rect[0] * ratioW, rect[1] * ratioH, 200 * ratioW, 200 * ratioH
+                rect = rect[0] * self.ratioW, rect[1] * self.ratioH, 200 * self.ratioW, 200 * self.ratioH
                 movableRect = MovaleRect(parent=self, whichCamerawhichROI=key,
-                                          pos=QPoint(rect[0] * ratioW, rect[1] * ratioW))
+                                          pos=QPoint(rect[0], rect[1]), rw=self.ratioW, rh=self.ratioH)
                 self.movableRects.append(movableRect)
 
     def slot_draw_mininum_rects(self):
@@ -67,8 +41,8 @@ class InitializationCameraWidget(BaseCameraWidget):
         :return:
         """
         # 第一次点击: 启动paintEvent绘制， 并启动可拖动movableRect与用户交互
-        if self.isDrawMininumRects is False:
-            self.isDrawMininumRects = True
+        if not self.isDrawROIs:
+            self.isDrawROIs = True
             self.show_moveable_rects()
         # 第二次点击:
         else:
@@ -80,7 +54,7 @@ class InitializationCameraWidget(BaseCameraWidget):
                 if ret == QMessageBox.Yes:
                     self.write_new_rects()
             # 关闭paintEvent绘制
-            self.isDrawMininumRects = False
+            self.isDrawROIs = False
             # 关闭movable Rects绘制:
             for movableRect in self.movableRects:
                 movableRect.hide()
@@ -96,8 +70,8 @@ class InitializationCameraWidget(BaseCameraWidget):
         for movableRect in self.movableRects:
             rect = self.cfg['ROIs_Conf'][movableRect.name]
             # 读取当前新的位置并覆盖掉原来的位置
-            rect[0] = movableRect.parentCor.x()
-            rect[1] = movableRect.parentCor.y()
+            rect[0] = int(movableRect.parentCor.x() / self.ratioW)
+            rect[1] = int(movableRect.parentCor.y() / self.ratioH)
             rect2str = str(rect[0])+','+str(rect[1])+','+str(rect[2])+','+str(rect[3])
             write_couple_cfg((movableRect.name, rect2str), path='../CONF.cfg')
         Signal_Map['CfgUpdateSignal'].emit()
@@ -120,7 +94,7 @@ class MovaleRect(QWidget):
     """
     可移动的rect矩形，让用户交互式的确定ROI的位置
     """
-    def __init__(self, parent, whichCamerawhichROI, pos):
+    def __init__(self, parent, whichCamerawhichROI, pos, rw, rh):
         """
 
         :param parent: 父类窗口： CameraWidget上绘制
@@ -128,7 +102,9 @@ class MovaleRect(QWidget):
         :param pos:  初始化坐标
         """
         super(MovaleRect, self).__init__(parent=parent)
-        self.setGeometry(0,0,200,200)
+        self.setGeometry(0,0,200*rw,200*rh)
+        self.rw = rw
+        self.rh = rh
         self.name = whichCamerawhichROI
         self.parentCor = pos
         self.move(pos)
@@ -154,7 +130,8 @@ class MovaleRect(QWidget):
         pen.setColor(Qt.yellow)
         pen.setWidth(4)
         painter.setPen(pen)
-        painter.drawRect(QRect(0,0,200,200))
-        painter.drawText(QPointF(0,10), self.tr('Movable:'+self.name))
+        painter.drawRect(QRect(0,0,200*self.rw,200*self.rh))
+        name = self.name.split('Camera')[0][0] + self.name.split('Camera')[1][0]
+        painter.drawText(QPointF(2,20), self.tr('Move:'+name))
         painter.setPen(oldPen)
         painter.end()

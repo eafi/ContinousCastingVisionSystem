@@ -139,7 +139,7 @@ def parse_roi_rect(obj):
     assert 'ROIs_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('ROIs configuration miss.'))
     ROIs_map = obj.cfg['ROIs_Conf']
     for key in ROIs_map:
-        obj.cfg['ROIs_Conf'][key] = [int(x) for x in ROIs_map[key].split(',')]
+        obj.cfg['ROIs_Conf'][key] = [float(x) for x in ROIs_map[key].split(',')]
 
 
 def parse_network(obj):

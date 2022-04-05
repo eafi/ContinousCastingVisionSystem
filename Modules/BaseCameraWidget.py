@@ -17,6 +17,9 @@ class BaseCameraWidget(QWidget):
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
         self.ia = harvesters
 
+        # 是否绘制ROIs
+        self.isDrawROIs = False
+
         calibrationmtx = cfg['HandEyeCalibration_Conf']
         self.mtx = calibrationmtx[f'{cameraType}Matrix']
         self.dist = calibrationmtx[f'{cameraType}Dist']
@@ -115,6 +118,19 @@ class BaseCameraWidget(QWidget):
             self.ratioH = self.windowH / self.h
             painter.drawImage(QRectF(0, 0, self.windowW, self.windowH),
                               qimage, QRectF(0, 0, self.w, self.h))
+
+            if self.isDrawROIs:
+                pen = QPen()
+                pen.setColor(Qt.red)
+                pen.setWidth(2)
+                painter.setPen(pen)
+                for key in self.cfg['ROIs_Conf']:
+                    if self.cameraType in key:
+                        rect = self.cfg['ROIs_Conf'][key]
+                        rect = rect[0]*self.ratioW, rect[1]*self.ratioH, rect[2]*self.ratioW, rect[3]*self.ratioH
+                        painter.drawRect(*rect)
+                        name = key.split('Camera')[0][0] + key.split('Camera')[1][0]
+                        painter.drawText(QPointF(rect[0]+2, rect[1]+20), self.tr(name))
             painter.end()
 
 
