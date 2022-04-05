@@ -42,10 +42,12 @@ class CoreSystem(QThread):
         self.coreSystemState = -1  # 系统检测宏观状态
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
-        self.isDetecting = False
-        #self.detect_timer = QTimer()
-        #self.detect_timer.start(100)
-        #self.detect_timer.timeout.connect(self.detect)
+        self.tmpThread = None
+        self.detect_enable = False
+        self.detect_timers = QTimer()
+        self.detect_timers.timeout.connect(self.detect)
+        self.detect_timers.start(1000)
+
 
     def run(self):
         """
@@ -65,13 +67,14 @@ class CoreSystem(QThread):
                 except Exception as e:
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.coreSystemState == 0:  # 初始化成功状态，等待TCP请求
+                sleep(2)
+                self.coreSystemState = 1
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
-                self.isDetecting = True
             #####################################################################################################
             #################################### PLC 请求相应函数 #################################################
             #####################################################################################################
             elif self.coreSystemState == 1:  # PLC命令启动检测,返回能源介质接头坐标
-                self.isDetecting = True
+                self.detect_enable = True
                 m = None
                 if 'LeftCameraTopROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraTopROI'].avg()
@@ -79,7 +82,6 @@ class CoreSystem(QThread):
                     self.robot.set_system_mode(1)
                     self.robot.set_move_mat(m)
             elif self.coreSystemState == 2:  # PLC命令启动检测，返回水口安装坐标
-                self.isDetecting = True
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraLeftROI'].avg()
@@ -89,7 +91,6 @@ class CoreSystem(QThread):
                     self.robot.set_system_mode(2)
                     self.robot.set_move_mat(m[0])
             elif self.coreSystemState == 3:  # 请求滑板液压缸坐标
-                self.isDetecting = True
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraLeftROI'].avg()
@@ -99,7 +100,6 @@ class CoreSystem(QThread):
                     self.robot.set_system_mode(3)
                     self.robot.set_move_mat(m[1])
             elif self.coreSystemState == 4:  # 请求水口坐标
-                self.isDetecting = True
                 m = None
                 if 'LeftCameraBottomROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraBottomROI'].avg()
@@ -120,11 +120,13 @@ class CoreSystem(QThread):
         # 机器人通讯资源
         self.core_resource_robot()
 
+
     def core_resource_cfg(self):
         if not initClass.cfgInit:
             self.cfgManager = CfgManager(path='CONF.cfg')
             self.cfg = self.cfgManager.cfg
             initClass.cfgInit = True
+            self.DETECT_CFG_THREADS = self.cfgManager.DETECT_CFG_THREADS
 
     def core_resource_cameras(self):
         if not initClass.cameraInit:
@@ -184,8 +186,7 @@ class CoreSystem(QThread):
         :return:
         """
         if rect.size == 0:
-            pass
-            # LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
+            LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
         else:
             LOG(log_types.OK, self.tr('In ' + description + ' found rect!'))
             # 从ROI到相机全幅图像的坐标偏移
@@ -203,22 +204,32 @@ class CoreSystem(QThread):
 
             self.targetFoundSignal.emit(description, rect)  # 与CameraWidget有关，用于绘制Target
 
-    def detect(self, state: str):
+    def detect(self):
         """
         使用第一种方法进行核心图像检测.
         本方法一旦相机发送OK状态后就开始不断调用: 在main.py中已经与相机Status信号发送绑定.
         此外，应该先检查相机系统状态后，才能调用检测 -> state == 'OK'
         :return:
         """
-        pass
-        img = self.camera_1.capture()
-        if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
-            roisMap = sender.get_roiImages()
-            for key in roisMap:
-                tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
+        if self.detect_enable and self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
+            print('detecting!!!')
+            if self.coreSystemState == 1:
+                img = self.camera_1.im_np
+                img = img + 2.0* (img - np.mean(img))
+                roi = self.cfg['ROIs_Conf']['LeftCameraTopROI']
+                roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+                cv2.imwrite('src.png', img)
+                tmpThread = Detection1(self.cfgManager.cfg, description='LeftCameraTopROI', img=roi_img)
                 tmpThread.returnValSignal.connect(self.threads_return_slot)
                 self.detectThread.append(tmpThread)
                 tmpThread.start()
+        #if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
+        #    roisMap = sender.get_roiImages()
+        #    for key in roisMap:
+        #        tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
+        #        tmpThread.returnValSignal.connect(self.threads_return_slot)
+        #        self.detectThread.append(tmpThread)
+        #        tmpThread.start()
 
     def target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
         """

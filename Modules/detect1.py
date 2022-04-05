@@ -61,11 +61,13 @@ class Detection1(QThread):
         """
         self.parse_cfg()
         srcF = self.img.astype(np.float32)
-        srcScaled = srcF[::2, ::2]
+        #srcScaled = srcF[::4, ::4]
+        srcScaled = cv2.resize(srcF, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
+        cv2.imwrite('small.png', np.array(srcScaled, dtype=np.uint8))
         ## 缩小图快速排查rect
-        rect = search(src_img=srcScaled, roi_size=0, board_size_range=[50, 100, 5], kernel_size=(50, 50),
-                      outer_diameter_range=(6, 40),
-                      ring_width_range=(1, 5), epsilon_dst=3, ring_threshold=[0.3, 0.8, 0.1])
+        rect = search(src_img=srcScaled, roi_size=0, board_size_range=[20, 50, 1], kernel_size=(50, 50),
+                      outer_diameter_range=(5, 20),
+                      ring_width_range=(1, 2), epsilon_dst=3, ring_threshold=[0.3, 0.8, 0.1])
         # 真正检查图像逻辑
         if rect.size != 0:
             rect = search(src_img=self.img, **self.kargs)

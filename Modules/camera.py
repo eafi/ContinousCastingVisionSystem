@@ -28,7 +28,8 @@ class Camera(QObject):
             # Reshape the image so that it can be drawn on the VisPy canvas:
             img = component.data.reshape(height, width)
             img = img.astype(np.uint8)
-            #img = cv2.resize(img, 1024))
+            #img = 255 - img.astype(np.uint8)
+            #img = img.astype(np.uint8)
             buffer.queue()
         except Exception as e:
             LOG(log_types.WARN, self.tr('Camera Capturing is Failed.'+e.args[0]))

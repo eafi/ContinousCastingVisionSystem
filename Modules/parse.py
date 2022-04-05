@@ -82,11 +82,11 @@ def parse_resources_cfg(obj):
     # 线程资源, 单相机最多检测线程数量。 每一张图像就开启了三个线程。
     cfg = obj.cfg['Resources_Conf']['ThreadResource']
     if 'mid' in cfg:
-        obj.DETECT_CFG_THREADS = 8
-    elif 'high' in cfg:
         obj.DETECT_CFG_THREADS = 16
+    elif 'high' in cfg:
+        obj.DETECT_CFG_THREADS = 32
     elif 'low' in cfg:
-        obj.DETECT_CFG_THREADS = 4
+        obj.DETECT_CFG_THREADS = 8
 
 
 
@@ -139,7 +139,7 @@ def parse_roi_rect(obj):
     assert 'ROIs_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('ROIs configuration miss.'))
     ROIs_map = obj.cfg['ROIs_Conf']
     for key in ROIs_map:
-        obj.cfg['ROIs_Conf'][key] = [float(x) for x in ROIs_map[key].split(',')]
+        obj.cfg['ROIs_Conf'][key] = [int(float(x)) for x in ROIs_map[key].split(',')]
 
 
 def parse_network(obj):

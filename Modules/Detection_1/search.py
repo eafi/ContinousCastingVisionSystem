@@ -187,7 +187,6 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
 
     #src_img = cv2.equalizeHist(src_img)
     src_img = src_img / 255.0
-    src_img = src_img + (src_img - np.mean(src_img)*1.0)
     #padding 防止越界
     padding_board = roi_size // 2
     src_img = cv2.copyMakeBorder(src_img, padding_board, padding_board, padding_board, padding_board, borderType=cv2.BORDER_CONSTANT, value=0.0)
@@ -241,10 +240,10 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
         points = search_4_points(acc_img=acc_img, pts_type=pts_type, area_threshold=area_threshold)
         rect = search_rect(points=points, img=acc_img, epsilon_k=epsilon_k, epsilon_dst=epsilon_dst) # (x, y)
         if rect.size != 0:
-            LOG(log_types.OK, 'found rect.')
+            #LOG(log_types.OK, 'found rect.')
             return rect+np.array((-padding_board+left_top_x, -padding_board+left_top_y)) # 回到src_img的全局坐标系下
     #cv2.imshow('[WARN] No Rect Found!', bgr_roi_img)
-    LOG(log_types.NOTICE, 'no rect found.')
+    #LOG(log_types.NOTICE, 'no rect found.')
     return rect
 
 
@@ -374,7 +373,7 @@ if __name__ == '__main__':
         cv2.imshow('roi', roi2)
         #cv2.waitKey(0)
         # 缩小图快速排查rect
-        rect = search(src_img=roi2, roi_size=0)
+        rect = search(src_img=img, roi_size=0)
 #        if rect is not None:
 #            cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
 #            cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
