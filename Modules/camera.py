@@ -3,6 +3,7 @@ A simple Program for grabing video from basler camera and converting it to openc
 Tested on Basler acA1300-200uc (USB3, linux 64bit , python 3.5)
 '''
 import cv2
+import numpy as np
 from PyQt5.QtCore import QObject
 from Modules.LOG import *
 
@@ -26,7 +27,8 @@ class Camera(QObject):
 
             # Reshape the image so that it can be drawn on the VisPy canvas:
             img = component.data.reshape(height, width)
-            img = cv2.resize(img, (1280,1024))
+            img = img.astype(np.uint8)
+            #img = cv2.resize(img, 1024))
             buffer.queue()
         except Exception as e:
             LOG(log_types.WARN, self.tr('Camera Capturing is Failed.'+e.args[0]))

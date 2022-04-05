@@ -87,8 +87,9 @@ class CoreSystemCameraWidget(BaseCameraWidget):
         """
         roiImages = {}
         for key in self.cfg['ROIs_Conf']:
-            roi = self.cfg['ROIs_Conf'][key]
-            roiImages[key] = (self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]])
+            if self.cameraType in key:
+                roi = self.cfg['ROIs_Conf'][key]
+                roiImages[key] = (self.im_np[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]])
         return roiImages
 
     def get_a_roiImage(self, whichCamerawhichROI: str):

@@ -36,6 +36,26 @@ def conv(img, kernels):
         output = output.to('cpu').numpy()
     return output
 
+
+def conv_cuda(img, kernels):
+    """
+
+    :param img: numpy array. (batch, 1, h, w) cvt to Tensor (batch,1,  h, w)
+    :param kernels: numpy array. (num kernels, h, w)cvt to Tensor
+    :return: 分组卷积，有多少层kernels就输出多少曾结果
+    """
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if len(img.shape) == 2: # single channel and batch
+        tensor_img = torch.tensor(img).unsqueeze(0).unsqueeze(0).float().to(device)
+    elif len(img.shape) == 3: # multi channel and single batch
+        tensor_img = torch.tensor(img).unsqueeze(0).permute(0, 3, 1, 2).float().to(device)
+    else: # four dims 既然已是四通道，默认用户知道torch组织形式
+        tensor_img = torch.tensor(img).float().to(device)
+    with torch.no_grad():
+        tensor_ker = torch.tensor(kernels, requires_grad=False).unsqueeze(1).float().to(device)
+        output = conv2d(tensor_img, tensor_ker, stride=1, bias=None, groups=1, padding='same').squeeze()
+    return output
+
 def weighted_mean_pos(img):
     """
     输入一张图片，输出这个图片的权重中心点，越亮的位置越有可能成为中心.

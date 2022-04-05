@@ -12,7 +12,7 @@ from Modules.parse import *
 from Modules.LOG import *
 from Modules.detect1 import Detection1
 from Modules.Detection_1.utils.PnP import *
-from PyQt5.QtCore import pyqtSignal, QThread, QMutex
+from PyQt5.QtCore import pyqtSignal, QThread, QTimer
 from Modules.TargetObj import TargetObj
 from Modules.utils import vecs2trans
 from Modules.Robot import Robot
@@ -43,6 +43,9 @@ class CoreSystem(QThread):
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
         self.isDetecting = False
+        #self.detect_timer = QTimer()
+        #self.detect_timer.start(100)
+        #self.detect_timer.timeout.connect(self.detect)
 
     def run(self):
         """
@@ -63,7 +66,7 @@ class CoreSystem(QThread):
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.coreSystemState == 0:  # 初始化成功状态，等待TCP请求
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
-                self.isDetecting = False
+                self.isDetecting = True
             #####################################################################################################
             #################################### PLC 请求相应函数 #################################################
             #####################################################################################################
@@ -207,16 +210,15 @@ class CoreSystem(QThread):
         此外，应该先检查相机系统状态后，才能调用检测 -> state == 'OK'
         :return:
         """
-        sender = self.sender()  # one of CameraWidget
-        # 确定系统所处阶段
-        if self.isDetecting and state == 'OK':
-            if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
-                roisMap = sender.get_roiImages()
-                for key in roisMap:
-                    tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
-                    tmpThread.returnValSignal.connect(self.threads_return_slot)
-                    self.detectThread.append(tmpThread)
-                    tmpThread.start()
+        pass
+        img = self.camera_1.capture()
+        if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
+            roisMap = sender.get_roiImages()
+            for key in roisMap:
+                tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
+                tmpThread.returnValSignal.connect(self.threads_return_slot)
+                self.detectThread.append(tmpThread)
+                tmpThread.start()
 
     def target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
         """

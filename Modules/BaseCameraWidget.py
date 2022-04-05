@@ -13,7 +13,7 @@ class BaseCameraWidget(QWidget):
     def __init__(self, cfg, cameraType, harvesters):
         super(BaseCameraWidget, self).__init__()
         self.im_np = None
-        self.fps = 33
+        self.fps = 66
         self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
         self.ia = harvesters
 
@@ -60,13 +60,13 @@ class BaseCameraWidget(QWidget):
         """
         self.setWindowTitle(self.cameraType)
         self.try_init_camera()
-        self.statuTimer = QTimer()
+        #self.statuTimer = QTimer()
         self.paintTimer = QTimer()
-        self.statuTimer.start(self.fps)
+        #self.statuTimer.start(self.fps)
         self.paintTimer.start(self.fps)
 
         self.paintTimer.timeout.connect(self.update)  # 定时更新画面
-        self.statuTimer.timeout.connect(self.status)  # 定时汇报模组状态
+        #self.statuTimer.timeout.connect(self.status)  # 定时汇报模组状态
 
 
     def try_init_camera(self):
@@ -82,6 +82,7 @@ class BaseCameraWidget(QWidget):
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
 
+                self.cameraStatusSignal.emit('OK')
                 # 明确相机的畸变和内参数矩阵
                 self.newCameramtx, roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.w, self.h), 1, (self.w, self.h))
                 # 重映射矩阵
@@ -103,6 +104,7 @@ class BaseCameraWidget(QWidget):
         :param event:
         :return:
         """
+        self.status()
         if self.camera is not None and self.im_np is not None:
             painter = QPainter()
             painter.begin(self)
