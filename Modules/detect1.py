@@ -21,6 +21,7 @@ class Detection1(QThread):
         self.img = img
         self.descriotion = description  # 用于描述这个img
         self.kargs = {}
+        self.parse_cfg()
 
     def parse_cfg(self):
         assert 'Detection1_Conf' in self.cfg, LOG(log_types.FAIL,
@@ -59,7 +60,6 @@ class Detection1(QThread):
         备用检测逻辑: 首先使用缩小图进行快速的Rect检测，只有当存在rect时，再使用原图大小进行检测
         :return:
         """
-        self.parse_cfg()
         srcF = self.img.astype(np.float32)
         #srcScaled = srcF[::4, ::4]
         srcScaled = cv2.resize(srcF, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)

@@ -1,3 +1,7 @@
+"""
+Author: Jia Han, Yifei Zhang
+Email:              imeafi@gmail.com
+"""
 import cv2
 import numpy as np
 

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from torchvision import transforms
 from network_files import FasterRCNN, FastRCNNPredictor, AnchorsGenerator
-from backbone import resnet50_fpn_backbone, MobileNetV2
+from backbone import resnet50_fpn_backbone
 from draw_box_utils import draw_box
 import numpy as np
 
