@@ -40,6 +40,7 @@ class CoreSystem(QThread):
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
         self.coreSystemState = -1  # 系统检测宏观状态
+        self.roiName = None
         self.DETECT_CFG_THREADS = 4  # 允许系统分配线程资源数
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
         self.tmpThread = None
@@ -76,12 +77,14 @@ class CoreSystem(QThread):
             elif self.coreSystemState == 1:  # PLC命令启动检测,返回能源介质接头坐标
                 self.detect_enable = True
                 m = None
+                self.roiName = 'LeftCameraTopROI'
                 if 'LeftCameraTopROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraTopROI'].avg()
                 if m is not None:
                     self.robot.set_system_mode(1)
                     self.robot.set_move_mat(m)
             elif self.coreSystemState == 2:  # PLC命令启动检测，返回水口安装坐标
+                self.detect_enable = True
                 m = None
                 if 'LeftCameraLeftROI' in self.targetObjs:
                     m = self.targetObjs['LeftCameraLeftROI'].avg()
@@ -212,17 +215,15 @@ class CoreSystem(QThread):
         :return:
         """
         if self.detect_enable and self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
-            print('detecting!!!')
-            if self.coreSystemState == 1:
-                img = self.camera_1.im_np
-                img = img + 2.0* (img - np.mean(img))
-                roi = self.cfg['ROIs_Conf']['LeftCameraTopROI']
-                roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-                cv2.imwrite('src.png', img)
-                tmpThread = Detection1(self.cfgManager.cfg, description='LeftCameraTopROI', img=roi_img)
-                tmpThread.returnValSignal.connect(self.threads_return_slot)
-                self.detectThread.append(tmpThread)
-                tmpThread.start()
+            img = self.camera_1.im_np
+            img = img + 2.0 * (img - np.mean(img))
+            roi = self.cfg['ROIs_Conf'][self.roiName]
+            roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+            cv2.imwrite('src.png', img)
+            tmpThread = Detection1(self.cfgManager.cfg, description=self.roiName, img=roi_img)
+            tmpThread.returnValSignal.connect(self.threads_return_slot)
+            self.detectThread.append(tmpThread)
+            tmpThread.start()
         #if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
         #    roisMap = sender.get_roiImages()
         #    for key in roisMap:
