@@ -233,10 +233,10 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
                 acc_img = threshold_output[0]
             else:
                 acc_img = acc_img | threshold_output[i] # 整合所有检查结果
-            cv2.imshow('filter', threshold_output[i].astype(np.uint8)*255)
-            cv2.imshow('output', np.array(output[i] * 255.0, dtype=np.uint8))
-            cv2.imshow('acc', np.array(acc_img, dtype=np.uint8)*255)
-            cv2.waitKey(20)
+            #cv2.imshow('filter', threshold_output[i].astype(np.uint8)*255)
+            #cv2.imshow('output', np.array(output[i] * 255.0, dtype=np.uint8))
+            #cv2.imshow('acc', np.array(acc_img, dtype=np.uint8)*255)
+            #cv2.waitKey(20)
         acc_img = acc_img.astype(np.uint8)*255
         points = search_4_points(acc_img=acc_img, pts_type=pts_type, area_threshold=area_threshold)
         rect = search_rect(points=points, img=acc_img, epsilon_k=epsilon_k, epsilon_dst=epsilon_dst) # (x, y)

@@ -63,7 +63,6 @@ class Detection1(QThread):
         srcF = self.img.astype(np.float32)
         #srcScaled = srcF[::4, ::4]
         srcScaled = cv2.resize(srcF, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_LINEAR)
-        cv2.imwrite('small.png', np.array(srcScaled, dtype=np.uint8))
         ## 缩小图快速排查rect
         rect = search(src_img=srcScaled, roi_size=0, board_size_range=[20, 50, 1], kernel_size=(50, 50),
                       outer_diameter_range=(5, 20),
