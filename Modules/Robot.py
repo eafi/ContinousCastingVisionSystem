@@ -11,7 +11,7 @@ class Robot(QThread):
         self.cfg = cfg
         self.sendCtlBit = np.uint32(0)
         self.sendData = 6 * [np.float32(0.0)]
-        self.sendResBit = 3 * [np.uint32(0)]
+        self.sendResBit = [np.float32(0.0), np.float32(0.0), np.uint32(0)]
 
         self.recCtlBit = None
         self.recData = None
@@ -89,8 +89,16 @@ class Robot(QThread):
         :return:
         """
         if 0 <= state < 32:
-            self.sendResBit[0] = 0x01 << state
+            self.sendResBit[2] = 0x01 << state
 
+    def set_light_on(self):
+        self.sendCtlBit &= ~self.cfg['Network_Conf']['NetworkLightOff']
+        self.sendCtlBit |= self.cfg['Network_Conf']['NetworkLightOn']
+
+
+    def set_light_off(self):
+        self.sendCtlBit &= ~self.cfg['Network_Conf']['NetworkLightOn']
+        self.sendCtlBit |= self.cfg['Network_Conf']['NetworkLightOff']
 
     def cmds_handler(self, ctl, data, res):
         # 重复指令检查
@@ -130,7 +138,7 @@ class Robot(QThread):
             self.set_network_ok() # 只要在发送，就一定意味着网络OK
             self.network.send(self.sendCtlBit, self.sendData, self.sendResBit)
             print(self.sendCtlBit)
-            self.cmds_handler(self.network.ctlBit, self.network.data, self.network.resBit)
+            #self.cmds_handler(self.network.ctlBit, self.network.data, self.network.resBit)
 
 
     #def get_plc_ok(self):

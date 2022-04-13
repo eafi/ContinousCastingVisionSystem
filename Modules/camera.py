@@ -40,22 +40,37 @@ class Camera(QObject):
 from harvesters.core import Harvester
 from platform import system
 if __name__ == '__main__':
-    h = Harvester()
-    if system() == 'Linux':
-        h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
-    else:
-        h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
-    h.update()
-    ia = h.create_image_acquirer(0)
-    ia2 = h.create_image_acquirer(1)
-    ia.start()
-    ia2.start()
-    c = Camera(ia=ia)
-    c2 = Camera(ia=ia2)
+    #h = Harvester()
+    #if system() == 'Linux':
+    #    h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+    #else:
+    #    h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
+    #h.update()
+    #ia = h.create_image_acquirer(0)
+    #ia2 = h.create_image_acquirer(1)
+    #ia.start()
+    ##ia2.start()
+    #c = Camera(ia=ia)
+    #c2 = Camera(ia=ia2)
+    from Modules.Robot import Robot
+    from Modules.parse import CfgManager
+    cfgManager = CfgManager(path='../CONF.cfg')
+    cfg = cfgManager.cfg
+    robot = Robot(cfg=cfg)
+    robot.start()  # 不停发送系统状态
 
+    count = 0
+    from time import sleep
     while True:
-        img = c.capture()
-        if img is not None:
-        #img2 = c2.capture()
-            cv2.imshow('df', img)
-            cv2.waitKey(33)
+        #img = c.capture()
+        robot.set_light_on()
+        robot.set_move_vec([1.2, 1.3, 1.4, 1.5, 1.6, 1.7])
+        robot.set_calibrate_req(0)
+        #if img is not None:
+        ##img2 = c2.capture()
+        #    cv2.imshow('df', cv2.resize(img, None, fx=0.5, fy=0.5))
+        #    k = cv2.waitKey(33)
+        #    if k == 99: # 'c'
+        #        cv2.imwrite(f'C:/Users/001/Desktop/imgs/{count}.bmp', img)
+        #        count += 1
+

@@ -110,9 +110,10 @@ def hand_eye_calibration(A, C, flag=1):
 #    hand_eye_cla(A, C, 0)
 
 
-def camera_calibration(images, grid=(11, 8), width=35):
+def camera_calibration(images, grid=(11, 8), width=30):
     """
     张正友标定
+    :param images: image files path
     :return:
     """
     h, w = grid
@@ -128,16 +129,21 @@ def camera_calibration(images, grid=(11, 8), width=35):
     for fname in images:
         img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
         img = 255 - img
+        bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         ret, corners = cv2.findChessboardCorners(img, (w, h), None)
+        print(fname)
         if ret == True:
             objpoints.append(objp)
             corners2 = cv2.cornerSubPix(img, corners, (11, 11), (-1, -1), criteria)
             imgpoints.append(corners)
             # Draw and display the corners
-            cv2.drawChessboardCorners(img, (h, w), corners2, ret)
+            cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
+            cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
+            print(fname, 'OK')
+            cv2.waitKey(0)
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
     # print(rvecs, tvecs)
-    print(mtx)
+    print(mtx, dist)
 
     mean_error = 0
     for i in range(len(objpoints)):
@@ -181,3 +187,7 @@ def calibration(robotPos, grid=(11, 8), width=35):
         A = np.array(A).reshape(-1, 4)
         # 手眼标定
         hand_eye_calibration(A, C)
+
+if __name__ == '__main__':
+    img_files = glob.glob('C:/Users/001/Desktop/imgs'+'/*.bmp')
+    camera_calibration(img_files)
