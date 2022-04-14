@@ -31,7 +31,9 @@ class CoreSystemCameraWidget(BaseCameraWidget):
                 pen = QPen()
                 pen.setColor(Qt.green)
                 painter.setPen(pen)
-                painter.drawPolyline(QPolygonF(map(lambda p: QPointF(*p), self.rect)))
+                # 将绘图缩放到适合当前窗口
+                rect = self.rect * np.array([self.ratioW, self.ratioH])
+                painter.drawPolyline(QPolygonF(map(lambda p: QPointF(*p),rect)))
 
             painter.setPen(oldPen)
             painter.end()

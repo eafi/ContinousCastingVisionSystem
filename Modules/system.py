@@ -126,7 +126,7 @@ class CoreSystem(QThread):
 
     def core_resource_cfg(self):
         if not initClass.cfgInit:
-            self.cfgManager = CfgManager(path='../CONF.cfg')
+            self.cfgManager = CfgManager(path='CONF.cfg')
             self.cfg = self.cfgManager.cfg
             initClass.cfgInit = True
             self.DETECT_CFG_THREADS = self.cfgManager.DETECT_CFG_THREADS
