@@ -8,9 +8,9 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 from torchvision import transforms
-from network_files import FasterRCNN, FastRCNNPredictor, AnchorsGenerator
-from backbone import resnet50_fpn_backbone
-from draw_box_utils import draw_box
+import sys
+from Modules.Detection_2.network_files import FasterRCNN, FastRCNNPredictor, AnchorsGenerator
+from Modules.Detection_2.backbone import resnet50_fpn_backbone
 import numpy as np
 
 
@@ -93,13 +93,6 @@ def main():
         if len(predict_boxes) == 0:
             print("没有检测到任何目标!")
 
-        draw_box(original_img,
-                 predict_boxes,
-                 predict_classes,
-                 predict_scores,
-                 category_index,
-                 thresh=0.5,
-                 line_thickness=3)
         plt.imshow(original_img)
         plt.show()
         # 保存预测的图片结果
