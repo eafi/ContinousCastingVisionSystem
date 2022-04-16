@@ -1,6 +1,5 @@
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 
 
@@ -138,8 +137,6 @@ def generate_board_kernels(ratio=2.0):
         kernel = mask_to_kernel(board)
         kernel[wh] = -1.0
         kernels.append(kernel)
-        plt.imshow(kernel)
-        plt.show()
         board = cv2.rotate(board, cv2.ROTATE_90_CLOCKWISE)
 
     return kernels

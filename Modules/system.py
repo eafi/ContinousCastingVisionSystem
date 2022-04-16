@@ -215,11 +215,9 @@ class CoreSystem(QThread):
         :return:
         """
         if self.detect_enable and self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
-            img = self.camera_1.im_np
-            img = img + 2.0 * (img - np.mean(img))
-            roi = self.cfg['ROIs_Conf'][self.roiName]
+            img = self.camera_1.im_np  # 左相机图像
+            roi = self.cfg['ROIs_Conf'][self.roiName] # 提取当前系统阶段所需要的ROI区域
             roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-            cv2.imwrite('src.png', img)
             tmpThread = Detection1(self.cfgManager.cfg, description=self.roiName, img=roi_img)
             tmpThread.returnValSignal.connect(self.threads_return_slot)
             self.detectThread.append(tmpThread)

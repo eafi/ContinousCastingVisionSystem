@@ -8,6 +8,7 @@ Email: imeafi@gmail.com
 """
 import glob
 import sys
+import time
 
 import cv2
 import numpy as np
@@ -163,7 +164,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 
-def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(200, 200), outer_diameter_range=(20, 70), ring_width_range=(5, 8), ring_threshold=[0.5,0.8,0.05],
+def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(40, 99), ring_width_range=(5, 8), ring_threshold=[0.5,0.99,0.05],
            area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=15):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
@@ -188,6 +189,7 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
     #src_img = cv2.equalizeHist(src_img)
     src_img = src_img.astype(np.float32)
     src_img = src_img / 255.0
+    src_img = src_img + 0.4 * (src_img - np.mean(src_img))  # 左
     #padding 防止越界
     padding_board = roi_size // 2
     src_img = cv2.copyMakeBorder(src_img, padding_board, padding_board, padding_board, padding_board, borderType=cv2.BORDER_CONSTANT, value=0.0)
@@ -217,6 +219,7 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
     # GPU卷积
     roi_img = 1.0 - roi_img # 由于环形是黑色区域，但是我们希望反色，这样环形变成高亮区域，有助于理解卷积结果:卷积结果越亮，越可能是环形的圆心
     output = conv(roi_img, kernels)
+    padding = (kernels[0].shape[0] - 1) // 2
     """
     由于不同标定板的光照环境变化剧烈，需要有一个阈值范围。ring_threshold越大，越对完美的环形敏感，相反越容易包含其他噪声。
     因此在设计时，先使用较大的阈值查找矩形，如果找不到再逐步降低阈值.
@@ -236,13 +239,14 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(20
             #cv2.imshow('filter', threshold_output[i].astype(np.uint8)*255)
             #cv2.imshow('output', np.array(output[i] * 255.0, dtype=np.uint8))
             #cv2.imshow('acc', np.array(acc_img, dtype=np.uint8)*255)
-            #cv2.waitKey(20)
+            #cv2.waitKey(33)
         acc_img = acc_img.astype(np.uint8)*255
         points = search_4_points(acc_img=acc_img, pts_type=pts_type, area_threshold=area_threshold)
         rect = search_rect(points=points, img=acc_img, epsilon_k=epsilon_k, epsilon_dst=epsilon_dst) # (x, y)
         if rect.size != 0:
             #LOG(log_types.OK, 'found rect.')
-            return rect+np.array((-padding_board+left_top_x, -padding_board+left_top_y)) # 回到src_img的全局坐标系下
+            return rect+np.array((-padding_board+left_top_x+padding, -padding_board+left_top_y+padding)) # 回到src_img的全局坐标系下
+
     #cv2.imshow('[WARN] No Rect Found!', bgr_roi_img)
     #LOG(log_types.NOTICE, 'no rect found.')
     return rect
@@ -339,21 +343,22 @@ if __name__ == '__main__':
     img_files = glob.glob(img_path+'/*.png')
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-        roi = img[400:650, 650:900] # LeftROI
-        roi2 = img[400:650, 0:250]
-        bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
+        roi2 = img[768:768*2, 300:1068]
+        #roi2 = roi2 + 0.4 * (roi2 - np.mean(roi2))  # 左
+        #roi2 = img[0:768, 1000:1768] # 空白区域
+        bgr_src = cv2.cvtColor(roi2, cv2.COLOR_GRAY2BGR)
 
         cv2.imshow('roi', roi2)
-        #cv2.waitKey(0)
+        cv2.waitKey(0)
         # 缩小图快速排查rect
         rect = search(src_img=roi2, roi_size=0)
-        if rect is not None:
+        if rect.any():
             cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
             cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
             cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
             cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
             cv2.imshow('found', bgr_src)
             cv2.waitKey(0)
-        imgs = np.stack((roi, roi2), axis=0)
+        #imgs = np.stack((roi, roi2), axis=0)
         #search_batch(src_imgs=imgs, roi_size=0)
 
