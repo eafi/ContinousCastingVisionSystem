@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import QApplication
 from CoreSystemGUI.ControlPanle.ControlPanleWidget import ControlPanleWidget
 from Modules.system import *
-#from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 
 class MainGUI(QObject):
     def __init__(self, path='CONF.cfg'):
