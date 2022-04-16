@@ -8,11 +8,14 @@ system.py是CoreSystem的执行主要backend文件，提供：
 2. detection方法资源调度和分配
 3. detection结果处理以及解析成Target坐标
 """
+import glob
+
 from Modules.parse import *
 from Modules.LOG import *
-from Modules.detect1 import Detection1
+#from Modules.detect1 import Detection1
 from Modules.Detection_1.utils.PnP import *
-from PyQt5.QtCore import pyqtSignal, QThread, QTimer
+from PyQt5.QtCore import pyqtSignal, QThread, QTimer, QProcess
+from multiprocessing import Process
 from Modules.TargetObj import TargetObj
 from Modules.utils import vecs2trans
 from Modules.Robot import Robot
@@ -22,6 +25,7 @@ from cv2 import Rodrigues
 from scipy.spatial.transform import Rotation as R
 from harvesters.core import Harvester
 from platform import system
+from Modules.detect1 import Detect
 
 
 class initClass:
@@ -31,9 +35,15 @@ class initClass:
     robotInit = False
 
 
+def test():
+    while True:
+        print('hhhh')
+
+
 class CoreSystem(QThread):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
     resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定:当资源分配成功后才能启动GUI
+    newImgSignal = pyqtSignal()
 
     def __init__(self):
         super(CoreSystem, self).__init__()
@@ -46,9 +56,9 @@ class CoreSystem(QThread):
         self.tmpThread = None
         self.detect_enable = False
         self.detect_timers = QTimer()
-        self.detect_timers.timeout.connect(self.detect)
+        self.detect_timers.timeout.connect(self.detect_img_prompt)
+        self.detect_timers.timeout.connect(self.detect_res_reader)
         self.detect_timers.start(1000)
-
 
     def run(self):
         """
@@ -122,6 +132,9 @@ class CoreSystem(QThread):
         self.core_resource_torch()
         # 机器人通讯资源
         self.core_resource_robot()
+        self.d = Detect()
+        self.p = Process(target=self.d.detect)
+        self.p.start()
 
 
     def core_resource_cfg(self):
@@ -164,71 +177,47 @@ class CoreSystem(QThread):
     def core_sys_state_change(self, state, datalst):
         self.coreSystemState = state
 
-    def threads_check(self, threads, maxNum):
-        """
-        动态更新可用线程资源
-        :param threads: list of threads
-        :param maxNum:
-        :return:
-        """
-        newThreads = []
-        for thread in threads:
-            if thread.isRunning():
-                newThreads.append(thread)
-        threads = newThreads
-        return True if len(newThreads) < maxNum else False
 
-    def threads_return_slot(self, description: str, rect: np.ndarray):
-        """
-        处理线程返回结果:
-        1. 发送找到Target信号，用于CameraWidget的Target绘制
-        2. 针对不同系统Stage状态，按照Cfg文件进行目标Target几何位置关系的解析工作
+    def detect_res_reader(self):
+        path = '.cache'
+        files = glob.glob(path+'/*.npy')
+        for file in files:
+            print(file)
+            split_name = os.path.splitext(os.path.basename(file))[0].split('-')
+            roi_name = split_name[0]
+            time_stamp = float(split_name[1])
+            rect = np.load(file)
+            os.remove(file)
 
-        :param description: Detection线程返回描述str，用于描述处理的是哪一个相机的哪一快ROI. e.g. LeftCameraLeftROI
-        :param rect: np.ndarray. 检测到的rect.
-        :return:
-        """
-        if rect.size == 0:
-            LOG(log_types.NOTICE, self.tr('In ' + description + ' Cannot found any rect.'))
-        else:
-            LOG(log_types.OK, self.tr('In ' + description + ' found rect!'))
-            # 从ROI到相机全幅图像的坐标偏移
-            rect = rect + np.array(self.cfg['ROIs_Conf'][description][:2], dtype=np.float32)
-            # 根据系统状态解析Target最终的几何位置关系
-            # 注意！这一步将Target坐标系转换到机械臂抓取的目标坐标系，因此CFG文件中Ref配置应该正确!!!
-            robot2Target = self.target_estimation(whichCamerawhichROI=description, rect=rect)
 
+            # PNP计算以及后处理
+            rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
+            robot2Target = self.target_estimation(whichCamerawhichROI=roi_name, rect=rect)
             # 系统只返回静止状态下的标定, 因此系统将保存并分析检测到的任何标定板信息
-            if description not in self.targetObjs.keys():  # 全新找到的对象
-                self.targetObjs[description] = TargetObj(rect, robot2Target)
+            if roi_name not in self.targetObjs.keys():  # 全新找到的对象
+                self.targetObjs[roi_name] = TargetObj(rect, robot2Target)
             else:
                 # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
-                self.targetObjs[description].step(rect, robot2Target)
+                self.targetObjs[roi_name].step(rect, robot2Target)
 
-            self.targetFoundSignal.emit(description, rect)  # 与CameraWidget有关，用于绘制Target
+            self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
 
-    def detect(self):
+
+
+
+    def detect_img_prompt(self):
         """
         使用第一种方法进行核心图像检测.
         本方法一旦相机发送OK状态后就开始不断调用: 在main.py中已经与相机Status信号发送绑定.
         此外，应该先检查相机系统状态后，才能调用检测 -> state == 'OK'
         :return:
         """
-        if self.detect_enable and self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
+        if self.detect_enable:
             img = self.camera_1.im_np  # 左相机图像
-            roi = self.cfg['ROIs_Conf'][self.roiName] # 提取当前系统阶段所需要的ROI区域
+            roi = self.cfg['ROIs_Conf'][self.roiName]  # 提取当前系统阶段所需要的ROI区域
             roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-            tmpThread = Detection1(self.cfgManager.cfg, description=self.roiName, img=roi_img)
-            tmpThread.returnValSignal.connect(self.threads_return_slot)
-            self.detectThread.append(tmpThread)
-            tmpThread.start()
-        #if self.threads_check(self.detectThread, self.DETECT_CFG_THREADS):
-        #    roisMap = sender.get_roiImages()
-        #    for key in roisMap:
-        #        tmpThread = Detection1(self.cfgManager.cfg, description=key, img=roisMap[key])
-        #        tmpThread.returnValSignal.connect(self.threads_return_slot)
-        #        self.detectThread.append(tmpThread)
-        #        tmpThread.start()
+            cv2.imwrite(f'.cache/{self.roiName}-{time.time()}.bmp', roi_img)
+
 
     def target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
         """
