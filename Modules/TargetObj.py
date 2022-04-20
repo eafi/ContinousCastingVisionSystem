@@ -36,17 +36,21 @@ class TargetObj(QObject):
         :return:
         """
         self.rects.append(rect)
-        if np.sum(np.var(self.rects, axis=0)) < 0.01:
+        err = np.sum(np.var(self.rects, axis=0))
+        print('curr error: ', err)
+        if err < 0.01:
             # 标定板静止
             self.isStable = True
             print(self.roi_name, 'Stable============================================')
         else:
+            print(self.roi_name, 'No Stable============================================')
             self.isStable = False
 
 
     def fetch_posture(self):
         if self.isStable:
-            m = self._target_estimation(self.roi_name, np.mean(self.rects, axis=0))
+            #m = self._target_estimation(self.roi_name, np.mean(self.rects, axis=0))
+            m = np.random.rand(4,2)
             return m
         # 标定板正在运动，不能返回
         return None
@@ -89,3 +93,20 @@ class TargetObj(QObject):
             robot2Target = robot2Camera @ camera2rect @ rect2Target
 
         return robot2Target
+
+
+if __name__ == '__main__':
+    rect = np.random.rand(4,2) * 100
+    tar = TargetObj(rect, 'LeftCameraLeftROI')
+    from time import sleep
+    while True:
+        sleep(2)
+        #rect = 100 * np.random.rand(4, 2)
+        new_rect = rect + 0.01 * np.random.rand(4,2)
+        print('new rect:',new_rect)
+        tar.step(new_rect)
+
+        m = tar.fetch_posture()
+        if m is None:
+            continue
+        print(m)

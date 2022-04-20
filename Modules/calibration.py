@@ -134,13 +134,13 @@ def camera_calibration(images, grid=(11, 8), width=30):
         print(fname)
         if ret == True:
             objpoints.append(objp)
-            corners2 = cv2.cornerSubPix(img, corners, (11, 11), (-1, -1), criteria)
+            corners2 = cv2.cornerSubPix(img, corners, (51, 51), (-1, -1), criteria)
             imgpoints.append(corners)
             # Draw and display the corners
             cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
-            cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
-            print(fname, 'OK')
-            cv2.waitKey(0)
+            #cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
+            #print(fname, 'OK')
+            #cv2.waitKey(0)
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
     # print(rvecs, tvecs)
     print(mtx, dist)
@@ -188,6 +188,85 @@ def calibration(robotPos, grid=(11, 8), width=35):
         # 手眼标定
         hand_eye_calibration(A, C)
 
+
+
+def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
+    """
+    利用四圆环标定板进行相机标定
+    :param file_path: 图像根目录,只接受bmp格式图片，并且以Conf文件ROI进行标定
+    :return:
+    """
+    from Modules.parse import CfgManager
+    import os
+    from itertools import chain
+    from Modules.Detection_1.search import search
+    cfg = CfgManager('../CONF.cfg').cfg
+    roi_name = 'LeftCameraLeftROI'
+    roi = cfg['ROIs_Conf'][roi_name]
+
+    dirs = os.listdir(path=file_path)
+    img_files = []
+    for dir in dirs:
+        path = os.path.join(file_path, dir, dir)
+        img_files.append(glob.glob(path + '/*.png'))
+    print(img_files)
+    img_files = list(chain.from_iterable(img_files))
+
+
+    # 理想标定板物理尺寸
+    width = 55
+    height = 50
+
+    #  w = 50, h = 55 的标定板
+    objp1 = np.zeros((4, 3), np.float32)
+    objp1[:, :2] = np.array(((0, 0), (height, 0), (height, width), (0, width)), dtype=np.float32)
+
+    # w = 55, h = 50的标定板
+    objp2 = np.zeros((4, 3), np.float32)
+    objp2[:, :2] = np.array(((0, 0), (width, 0), (width, height), (0, height)), dtype=np.float32)
+
+    objpoints = []
+    imgpoints = []
+    for img_file in img_files[:20]:
+        img = cv2.imread(img_file, cv2.IMREAD_GRAYSCALE)
+        roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+        bgr_src = cv2.cvtColor(roi_img, cv2.COLOR_GRAY2BGR)
+        rect = search(roi_img, roi_size=0)
+        if rect.any():
+            cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+            cv2.imshow('found', bgr_src)
+            # 判别标定板是横向还是竖向： 注意rect返回的 0-x, 1-y
+            dw = rect[1][0] - rect[0][0] # 宽度
+            dh = rect[-1][1] - rect[0][1] # 高度
+            print(rect)
+            if dw > dh : # 横向标定盘
+                print('horizontal:',objp2)
+                objpoints.append(objp2)
+            else:
+                print('vertical:', objp1)
+                objpoints.append(objp1)
+
+            imgpoints.append(rect[:,np.newaxis,:].astype(np.float32))
+            #cv2.waitKey(0)
+
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (768,768), None, None)
+
+    print(mtx, dist)
+    mean_error = 0
+    for i in range(len(objpoints)):
+        imgpoints2, _ = cv2.projectPoints(objpoints[i], rvecs[i], tvecs[i], mtx, dist)
+        error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
+        mean_error += error
+    print("total error: {}".format(mean_error / len(objpoints)))
+
+
 if __name__ == '__main__':
-    img_files = glob.glob('C:/Users/001/Desktop/imgs'+'/*.bmp')
-    camera_calibration(img_files)
+    #path = 'E:/home/eafi/ca'
+    ###path = 'C:/Users/xjtu/Desktop/ca'
+    #img_files = glob.glob(path+'/*.bmp')
+    #camera_calibration(img_files)
+
+    rect_camera_calibration()

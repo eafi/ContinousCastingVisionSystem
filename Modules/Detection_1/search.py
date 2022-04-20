@@ -164,7 +164,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 
-def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(40, 99), ring_width_range=(5, 8), ring_threshold=[0.9,1.0,0.05],
+def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.8,0.05],
            area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=15):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
@@ -189,7 +189,8 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99
     #src_img = cv2.equalizeHist(src_img)
     src_img = src_img.astype(np.float32)
     src_img = src_img / 255.0
-    src_img = src_img + 0.4 * (src_img - np.mean(src_img))  # 左
+    #src_img = src_img + 0.4 * (src_img - np.mean(src_img))  # 左
+    #cv2.imshow('enhanced', src_img)
     #padding 防止越界
     padding_board = roi_size // 2
     src_img = cv2.copyMakeBorder(src_img, padding_board, padding_board, padding_board, padding_board, borderType=cv2.BORDER_CONSTANT, value=0.0)
@@ -343,7 +344,7 @@ if __name__ == '__main__':
     img_files = glob.glob(img_path+'/*.png')
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-        roi = img[768:768*2, 300:1068]
+        roi = img[768+100:768*2-300, 300+250:1068-200]
         roi2 = roi[0::4,0::4]
         roi3 = roi[1::4,1::4]
         roi4 = roi[2::4,2::4]
@@ -355,26 +356,26 @@ if __name__ == '__main__':
         cv2.imshow('roi', roi)
         cv2.waitKey(0)
         # 缩小图快速排查rect
-        kargs = {
-            'board_size_range': [25, 50, 1],
-            'kernel_size': (25, 25),
-            'outer_diameter_range': (10, 25),
-            'ring_width_range': (1, 2),
-            'ring_threshold': [0.9, 1.0, 0.05],
-            'area_threshold': (1, 500),
-        }
-        rects = []
-        start_time = time.time()
-        rect = search(src_img=roi2, roi_size=0, **kargs)
-        rects.append(rect)
-        rect = search(src_img=roi3, roi_size=0, **kargs)
-        rects.append(rect)
-        rect = search(src_img=roi4, roi_size=0, **kargs)
-        rects.append(rect)
-        rect = search(src_img=roi5, roi_size=0, **kargs)
-        rects.append(rect)
-        print(f'time1:{time.time() - start_time}')
-        print(4.0*np.mean(rects, axis=0))
+        #kargs = {
+        #    'board_size_range': [25, 50, 1],
+        #    'kernel_size': (25, 25),
+        #    'outer_diameter_range': (10, 25),
+        #    'ring_width_range': (1, 2),
+        #    'ring_threshold': [0.9, 1.0, 0.05],
+        #    'area_threshold': (1, 500),
+        #}
+        #rects = []
+        #start_time = time.time()
+        #rect = search(src_img=roi2, roi_size=0, **kargs)
+        #rects.append(rect)
+        #rect = search(src_img=roi3, roi_size=0, **kargs)
+        #rects.append(rect)
+        #rect = search(src_img=roi4, roi_size=0, **kargs)
+        #rects.append(rect)
+        #rect = search(src_img=roi5, roi_size=0, **kargs)
+        #rects.append(rect)
+        #print(f'time1:{time.time() - start_time}')
+        #print(4.0*np.mean(rects, axis=0))
 
         start_time = time.time()
         rect = search(src_img=roi, roi_size=0)

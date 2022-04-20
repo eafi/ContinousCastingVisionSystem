@@ -34,13 +34,18 @@ def draw(img, corners, imgpts):
     return img
 
 
-def get_four_points(width=55, hight=50):
+def get_four_points(width=55, height=50, vertical=True):
     """
     获取4points的理想坐标, 单位为毫米, x, y, z
+    :param vertical: 竖直标定板，或横置标定板。默认为竖直
     :return:
     """
     objp = np.zeros((4, 3), np.float32)
-    objp[:, :2] = np.array(((0, 0), (width, 0), (width, hight), (0, hight)), dtype=np.float32)
+
+    if vertical:
+        objp[:, :2] = np.array(((0, 0), (height, 0), (height, width), (0, width)), dtype=np.float32)
+    else:
+        objp[:, :2] = np.array(((0, 0), (width, 0), (width, height), (0, height)), dtype=np.float32)
     return objp
 
 

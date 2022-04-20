@@ -31,11 +31,6 @@ class initClass:
     robotInit = False
 
 
-def test():
-    while True:
-        print('hhhh')
-
-
 class CoreSystem(QThread):
     targetFoundSignal = pyqtSignal(str, np.ndarray)  # 主要用于CameraWidget的Target绘制工作，在CoreSystemMain.py绑定
     resourceInitOKSignal = pyqtSignal()  # 告知mainGUI资源初始化成功，在CoreSystemMain.py绑定:当资源分配成功后才能启动GUI
@@ -108,6 +103,7 @@ class CoreSystem(QThread):
                 if m is not None:
                     self.robot.set_system_mode(set_sys_mod)
                     self.robot.set_move_mat(m)
+                    self.coreSystemState = 0 # 系统回到静默状态
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
