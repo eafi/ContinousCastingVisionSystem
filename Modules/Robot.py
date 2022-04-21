@@ -100,32 +100,6 @@ class Robot(QThread):
         self.sendCtlBit &= ~self.cfg['Network_Conf']['NetworkLightOn']
         self.sendCtlBit |= self.cfg['Network_Conf']['NetworkLightOff']
 
-    def cmds_handler(self, ctl, data, res):
-        # 重复指令检查
-        if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
-            return
-        self.recCtlBit = ctl
-        self.recData = data
-        self.recResBit = res
-        # PLC命令： 系统状态检查
-        for state in range(1, 6):
-            if ctl & self.cfg['Network_Conf'][f'NetworkState{state}']:
-                self.systemStateChange.emit(state, [])
-
-        # ====================  标定阶段 ============================ #
-        # 检查机器人空闲
-        if ctl & self.cfg['Network_Conf']['NetworkCanMove']: # 注意请求和允许命令是镜像的
-            self.systemStateChange.emit(0x10, [])
-
-        # PLC命令： 标定允许
-        if ctl & self.cfg['Network_Conf']['NetworkRequestCalibrateOK']:
-            self.systemStateChange.emit(0x11, [])
-
-        # PLC命令： 机器人到位，请拍照并准备下一个位置
-        for state in range(32):
-            if res[0] & (0x01 << state): # 注意不是控制位，而是Res位置
-                self.systemStateChange.emit(0x12+state, self.recData)
-
 
 
     def run(self):
@@ -138,7 +112,42 @@ class Robot(QThread):
             self.set_network_ok() # 只要在发送，就一定意味着网络OK
             self.network.send(self.sendCtlBit, self.sendData, self.sendResBit)
             print(self.sendCtlBit)
-            #self.cmds_handler(self.network.ctlBit, self.network.data, self.network.resBit)
+            self.cmds_handler(self.network.ctlBit, self.network.data, self.network.resBit)
+
+
+    def cmds_handler(self, ctl, data, res):
+        """
+        网络通讯: 接受PLC命令
+        :param ctl:
+        :param data:
+        :param res:
+        :return:
+        """
+        # 重复指令检查
+        if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
+            return
+        self.recCtlBit = ctl
+        self.recData = data
+        self.recResBit = res
+        # =================== 核心计算状态切换和请求指令 ==================== #
+        # PLC命令： 系统状态检查
+        for state in range(1, 6):
+            if ctl & self.cfg['Network_Conf'][f'NetworkState{state}']:
+                self.systemStateChange.emit(state, [])
+
+        # ==================  标定阶段: 接受状态切换以及读取姿态信息 =================== #
+        # 检查机器人空闲
+        if ctl & self.cfg['Network_Conf']['NetworkCanMove']:  # 注意请求运动和允许运动命令是镜像的
+            self.systemStateChange.emit(0x10, [])
+
+        # PLC命令： 标定允许
+        if ctl & self.cfg['Network_Conf']['NetworkRequestCalibrateOK']:
+            self.systemStateChange.emit(0x11, [])
+
+        # PLC命令： 机器人到位，请拍照并准备下一个位置
+        for state in range(32):
+            if res[2] & (0x01 << state): # 注意不是控制位，而是Res[2]位置
+                self.systemStateChange.emit(0x12+state, self.recData)
 
 
     #def get_plc_ok(self):

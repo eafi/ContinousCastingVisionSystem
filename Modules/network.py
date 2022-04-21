@@ -40,7 +40,7 @@ class AbstractMsg(QObject):
             #self.recCtlBits, self.recData, self.recResBits = data[0], data[1:7], data[7:]
 
             self.recCtlBits, self.recData, self.recResBits = data[-1], data[3:9][::-1], data[:3][::-1]
-            #print('[Info] Recv:', self.recCtlBits, self.recData, self.recResBits)
+            print('[Info] Recv:', self.recCtlBits, self.recData, self.recResBits)
             return self.recCtlBits, self.recData, self.recResBits
 
 
@@ -141,7 +141,7 @@ class Network(QThread):
                         print(' ', s.getpeername(), 'queue empty()')
                         self.outputs.remove(s)  # 该套接子没有要发送的内容，关闭套接子
                     else:
-                        print(' sending {!r} to {}'.format(next_msg, s.getpeername()))
+                        #print(' sending {!r} to {}'.format(next_msg, s.getpeername()))
                         s.sendall(next_msg)
 
 

@@ -155,7 +155,7 @@ def camera_calibration(images, grid=(11, 8), width=30):
 
 import glob
 from Modules.utils import vecs2trans
-def calibration(robotPos, grid=(11, 8), width=35):
+def calibration(robotPos, grid=(11, 8), width=30):
     """
     :param robotMovePos: 机械臂移动末端位置
     :param grid: 棋盘格数量
@@ -204,14 +204,7 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
     roi_name = 'LeftCameraLeftROI'
     roi = cfg['ROIs_Conf'][roi_name]
 
-    dirs = os.listdir(path=file_path)
-    img_files = []
-    for dir in dirs:
-        path = os.path.join(file_path, dir, dir)
-        img_files.append(glob.glob(path + '/*.png'))
-    print(img_files)
-    img_files = list(chain.from_iterable(img_files))
-
+    img_files = glob.glob(path+'/*.bmp')
 
     # 理想标定板物理尺寸
     width = 55
@@ -229,7 +222,11 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
     imgpoints = []
     for img_file in img_files[:20]:
         img = cv2.imread(img_file, cv2.IMREAD_GRAYSCALE)
-        roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+
+        #roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+        roi_img = img[2048-768:2048,2560-768:2560]
+        cv2.imshow('roi', roi_img)
+        cv2.waitKey(0)
         bgr_src = cv2.cvtColor(roi_img, cv2.COLOR_GRAY2BGR)
         rect = search(roi_img, roi_size=0)
         if rect.any():
@@ -250,7 +247,7 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
                 objpoints.append(objp1)
 
             imgpoints.append(rect[:,np.newaxis,:].astype(np.float32))
-            #cv2.waitKey(0)
+            cv2.waitKey(0)
 
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (768,768), None, None)
 
@@ -265,8 +262,9 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
 
 if __name__ == '__main__':
     #path = 'E:/home/eafi/ca'
+    path = 'C:/Users/xjtu/Desktop/imgs/imgs/circiels'
     ###path = 'C:/Users/xjtu/Desktop/ca'
     #img_files = glob.glob(path+'/*.bmp')
     #camera_calibration(img_files)
 
-    rect_camera_calibration()
+    rect_camera_calibration(path)
