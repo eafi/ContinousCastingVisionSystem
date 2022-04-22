@@ -24,7 +24,7 @@ class AbstractMsg(QObject):
         super(AbstractMsg, self).__init__()
         self.recCtlBits = np.uint32(0)
         self.recData = 6 * [np.float32(0.0)]
-        self.recResBits = [np.uint32(0), np.float(0.0), np.float(0.0)]
+        self.recResBits = [np.float(0.0), np.float(0.0), np.uint32(0)]
 
         self.codenFormat_ = "I8fI"
 
@@ -35,12 +35,16 @@ class AbstractMsg(QObject):
 
     def parse(self, data):
         if data and len(data) == 40:
-            data = data[::-1]
-            data = list(struct.unpack(self.decodenFormat_, data))
+            #print(data)
+            float_data = data[::-1]
+            float_data = list(struct.unpack(self.decodenFormat_, float_data))
             #self.recCtlBits, self.recData, self.recResBits = data[0], data[1:7], data[7:]
 
-            self.recCtlBits, self.recData, self.recResBits = data[-1], data[3:9][::-1], data[:3][::-1]
-            print('[Info] Recv:', self.recCtlBits, self.recData, self.recResBits)
+            self.recCtlBits = int.from_bytes(data[:4], 'little')
+            self.recResBits[2] = int.from_bytes(data[-4:], 'little')
+            #float_lst = float_data[3:-1][::-1]
+            self.recData, self.recResBits[:2] = float_data[3:9][::-1], float_data[:3][::-1][:2]
+            #print('[Info] Recv:', self.recCtlBits, self.recData, self.recResBits)
             return self.recCtlBits, self.recData, self.recResBits
 
 
@@ -94,18 +98,18 @@ class Network(QThread):
         self.resBit = None
 
     def run(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-            server.setblocking(0)  # 非阻塞套接字
-            server.bind((self.ip, self.port))
-            server.listen(1)
-            inputs = [server]
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.server:
+            self.server.setblocking(0)  # 非阻塞套接字
+            self.server.bind((self.ip, self.port))
+            self.server.listen(1)
+            inputs = [self.server]
             self.outputs = []
             self.message_queues = {}
             while inputs:
                 #print('wating for the next event')
                 readable, writable, exceptional = select.select(inputs, self.outputs, inputs, 1)
                 for s in readable:
-                    if s is server:
+                    if s is self.server:
                         connection, client_address = s.accept()
                         print('connect from', client_address)
                         connection.setblocking(0)
@@ -168,6 +172,10 @@ class Network(QThread):
         except Exception as e:
             print(e.args[0])
 
+
+    def __del__(self):
+        self.server.shutdown()
+        self.server.close()
 
 
 

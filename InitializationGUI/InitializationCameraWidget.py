@@ -17,6 +17,7 @@ class InitializationCameraWidget(BaseCameraWidget):
         super(InitializationCameraWidget, self).paintEvent(event=event)
 
 
+
     def show_moveable_rects(self):
         """
         依据cfg中的既有Rect ROI 产生可移动rect

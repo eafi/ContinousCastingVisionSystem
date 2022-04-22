@@ -91,6 +91,10 @@ class Robot(QThread):
         if 0 <= state < 32:
             self.sendResBit[2] = 0x01 << state
 
+
+    def reset_calibrate_req(self):
+        self.sendResBit[2] = 0x00
+
     def set_light_on(self):
         self.sendCtlBit &= ~self.cfg['Network_Conf']['NetworkLightOff']
         self.sendCtlBit |= self.cfg['Network_Conf']['NetworkLightOn']
@@ -111,8 +115,7 @@ class Robot(QThread):
             sleep(0.5)  # 注意如果没有这个，可能会导致缓存崩溃
             self.set_network_ok() # 只要在发送，就一定意味着网络OK
             self.network.send(self.sendCtlBit, self.sendData, self.sendResBit)
-            print(self.sendCtlBit)
-            self.cmds_handler(self.network.ctlBit, self.network.data, self.network.resBit)
+            self.cmds_handler(self.network.msgManager.recCtlBits, self.network.msgManager.recData, self.network.msgManager.recResBits)
 
 
     def cmds_handler(self, ctl, data, res):
@@ -124,8 +127,11 @@ class Robot(QThread):
         :return:
         """
         # 重复指令检查
-        if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
-            return
+        #print('dfsf', ctl)
+
+        print(ctl)
+        #if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
+        #    return
         self.recCtlBit = ctl
         self.recData = data
         self.recResBit = res
@@ -144,10 +150,17 @@ class Robot(QThread):
         if ctl & self.cfg['Network_Conf']['NetworkRequestCalibrateOK']:
             self.systemStateChange.emit(0x11, [])
 
+        # PLC命令： PLC已经接收到运动指令，机械臂正在运动中，PLC请求 \
+        #  清除系统发送当前Res冗余字位置[2] 为 0
+        if ctl & self.cfg['Network_Conf']['NetworkOneStepCalibratingOK']:
+            self.reset_calibrate_req()
+            self.systemStateChange.emit(0x12, [])
+
+
         # PLC命令： 机器人到位，请拍照并准备下一个位置
         for state in range(32):
             if res[2] & (0x01 << state): # 注意不是控制位，而是Res[2]位置
-                self.systemStateChange.emit(0x12+state, self.recData)
+                self.systemStateChange.emit(0x100+state, self.recData)
 
 
     #def get_plc_ok(self):
