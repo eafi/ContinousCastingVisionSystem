@@ -137,8 +137,12 @@ class CoreSystem(QThread):
             self.h.update()
             LOG(log_types.NOTICE, self.tr('Camera List: '))
             print(self.h.device_info_list)
-            self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
-            self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
+            # DEBUG
+
+            #self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
+            #self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
+            self.camera_1 = self.h.create_image_acquirer(0)
+            self.camera_2 = self.h.create_image_acquirer(1)
             self.camera_1.start()
             self.camera_2.start()
             initClass.cameraInit = True

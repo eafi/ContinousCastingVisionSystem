@@ -110,7 +110,7 @@ def hand_eye_calibration(A, C, flag=1):
 #    hand_eye_cla(A, C, 0)
 
 
-def camera_calibration(images, grid=(11, 8), width=30):
+def camera_calibration(images, grid=(11, 8), width=30, prior_im=None):
     """
     张正友标定
     :param images: image files path
@@ -126,13 +126,15 @@ def camera_calibration(images, grid=(11, 8), width=30):
     objpoints = []  # 3d point in real world space
     imgpoints = []  # 2d points in image plane.
     img = None
-    for fname in images:
+    mask = np.zeros(len(images),dtype=np.int32)
+    for idx, fname in enumerate(images):
         img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
         img = 255 - img
         bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         ret, corners = cv2.findChessboardCorners(img, (w, h), None)
         print(fname)
         if ret == True:
+            mask[idx] = 1
             objpoints.append(objp)
             corners2 = cv2.cornerSubPix(img, corners, (51, 51), (-1, -1), criteria)
             imgpoints.append(corners)
@@ -141,7 +143,11 @@ def camera_calibration(images, grid=(11, 8), width=30):
             #cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
             #print(fname, 'OK')
             #cv2.waitKey(0)
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
+    if prior_im is not None:
+        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], prior_im, None,
+                                                           flags=cv2.CALIB_USE_INTRINSIC_GUESS| cv2.CALIB_ZERO_TANGENT_DIST | cv2.CALIB_FIX_INTRINSIC)
+    else:
+        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None, flags=cv2.CALIB_ZERO_TANGENT_DIST)
     # print(rvecs, tvecs)
     print(mtx, dist)
 
@@ -151,7 +157,7 @@ def camera_calibration(images, grid=(11, 8), width=30):
         error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
         mean_error += error
     print("total error: {}".format(mean_error / len(objpoints)))
-    return mtx, dist, rvecs, tvecs
+    return mtx, dist, rvecs, tvecs, mask
 
 import glob
 from Modules.utils import vecs2trans
@@ -249,7 +255,7 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
             imgpoints.append(rect[:,np.newaxis,:].astype(np.float32))
             cv2.waitKey(0)
 
-    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (768,768), None, None)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (768,768), None, None, flags=cv2.CALIB_ZERO_TANGENT_DIST|cv2.CALIB_FIX_FOCAL_LENGTH)
 
     print(mtx, dist)
     mean_error = 0
@@ -260,11 +266,46 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
     print("total error: {}".format(mean_error / len(objpoints)))
 
 
+from scipy import io
 if __name__ == '__main__':
     #path = 'E:/home/eafi/ca'
-    path = 'C:/Users/xjtu/Desktop/imgs/imgs/circiels'
+    #path = 'C:/Users/xjtu/Desktop/imgs/imgs/circiels'
+    path = 'C:/Users/xjtu/Desktop/4'
     ###path = 'C:/Users/xjtu/Desktop/ca'
-    #img_files = glob.glob(path+'/*.bmp')
-    #camera_calibration(img_files)
+    file_list = glob.glob(path+'Left/-*.bmp')
+    #prior_im = io.loadmat('E:/home/eafi/ca/matlab.mat')['x']
+    #camera_calibration(img_files, prior_im)
 
-    rect_camera_calibration(path)
+    # 1. 机器人位姿数据所在文件夹
+    source_dir = 'Pose'
+    file_list = glob.glob(source_dir + '/*.txt')
+    data_pose = []
+
+    # 2. 读取以逗号分割的数据，并转化为4x4矩阵格式
+    for file_name in file_list:
+        with open(file_name, 'r') as f:
+            data = f.readline()
+            x = [float(x) for x in data.split(',')[:-1]]
+
+            eular = R.from_euler('xyz', x[-3:], degrees=True)
+            trans = np.array(x[:3])
+            m = np.zeros((4, 4))
+            m[:3, :3] = eular.as_matrix()
+            m[:3, 3] = trans
+            m[3, 3] = 1.0
+            data_pose.append(m)
+    data_pose = np.array(data_pose, dtype=np.float32).reshape(-1, 4)
+    # print(data_pose.shape)
+
+    # io.savemat('data_pose.mat', {'pose': data_pose})
+    # 3. 载入相机外参
+    mat = io.loadmat('extern.mat')
+    A = np.array(mat['extern'], np.float32)
+    print(A[:4, :])
+    from eye_cal import hand_eye_cla
+    print(data_pose.shape)
+    print(A.shape)
+    hand_eye_cla(data_pose, A, 1)
+
+
+    #rect_camera_calibration(path)

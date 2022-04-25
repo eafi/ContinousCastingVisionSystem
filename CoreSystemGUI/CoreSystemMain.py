@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QApplication
 from CoreSystemGUI.ControlPanle.ControlPanleWidget import ControlPanleWidget
 from Modules.system import *
 from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
+from CoreSystemGUI.ControlPanle.MoreWidget import MoreWidget
 
 class MainGUI(QObject):
     def __init__(self, path='CONF.cfg'):
@@ -44,6 +45,7 @@ class MainGUI(QObject):
         self.controlPanle.buttonWidget.button_visCamera2.clicked.connect(self.rightCameraWidget.show)
         self.controlPanle.buttonWidget.button_log.clicked.connect(self.controlPanle.buttonWidget.logWidgetPop) # 日志按钮绑定
         self.controlPanle.buttonWidget.button_showLogDir.clicked.connect(self.controlPanle.buttonWidget.logDirPop)
+        self.controlPanle.buttonWidget.button_moreSettings.clicked.connect(self.more_btn_slot)
 
 
         # ControlPanle - Visualization Widget 框选绑定
@@ -51,6 +53,7 @@ class MainGUI(QObject):
         self.controlPanle.visualizationWidget.ROICheckBox.stateChanged.connect(self.rightCameraWidget.toggle_rois)
         self.controlPanle.visualizationWidget.targetsCheckBox.stateChanged.connect(self.leftCameraWidget.toggle_targets)
         self.controlPanle.visualizationWidget.targetsCheckBox.stateChanged.connect(self.rightCameraWidget.toggle_targets)
+
 
 
         # CoreSystem 核心算法检测到rect的信号绑定
@@ -61,6 +64,9 @@ class MainGUI(QObject):
 
         self.controlPanle.show()
 
+    def more_btn_slot(self):
+        self.moreWidget = MoreWidget(self.core.cfg, self.leftCameraWidget, self.rightCameraWidget)
+        self.moreWidget.show()
 
 
 

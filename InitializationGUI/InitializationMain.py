@@ -43,6 +43,10 @@ class MainGUI(QWidget):
         print(self.h.device_info_list)
         self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
         self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
+
+        #self.camera_1 = self.h.create_image_acquirer(0)
+        #self.camera_2 = self.h.create_image_acquirer(1)
+
         self.camera_1.start()
         self.camera_2.start()
         self.leftCamera = InitializationCameraWidget(cfg=self.cfgManager.cfg, cameraType=self.tr('LeftCamera'), harvesters=self.camera_1)

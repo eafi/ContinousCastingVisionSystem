@@ -164,7 +164,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 
-def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.8,0.05],
+def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.9,0.05],
            area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=15):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
@@ -344,17 +344,18 @@ if __name__ == '__main__':
     img_files = glob.glob(img_path+'/*.png')
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-        roi = img[768+100:768*2-300, 300+250:1068-200]
-        roi2 = roi[0::4,0::4]
-        roi3 = roi[1::4,1::4]
-        roi4 = roi[2::4,2::4]
-        roi5 = roi[3::4,3::4]
-        #roi2 = roi2 + 0.4 * (roi2 - np.mean(roi2))  # 左
-        #roi2 = img[0:768, 1000:1768] # 空白区域
-        bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
 
-        cv2.imshow('roi', roi)
-        cv2.waitKey(0)
+        cv2.imshow('img', img)
+        roi = img[768+100:768*2-300, 300+250:1068-200]
+        bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
+        roi = roi.astype(np.float32) / 255.0
+        val = 2.0
+        while True:
+            tmp_roi = roi + val * (roi - np.mean(roi))
+            cv2.imshow('roi', tmp_roi)
+            print(val)
+            cv2.waitKey(0)
+            val -= 0.2
         # 缩小图快速排查rect
         #kargs = {
         #    'board_size_range': [25, 50, 1],
@@ -377,18 +378,18 @@ if __name__ == '__main__':
         #print(f'time1:{time.time() - start_time}')
         #print(4.0*np.mean(rects, axis=0))
 
-        start_time = time.time()
-        rect = search(src_img=roi, roi_size=0)
-        print(f'time2:{time.time() - start_time}')
-        print(rect)
+        #start_time = time.time()
+        #rect = search(src_img=roi, roi_size=0)
+        #print(f'time2:{time.time() - start_time}')
+        #print(rect)
 
-        if rect.any():
-            cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
-            cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
-            cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
-            cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
-            cv2.imshow('found', bgr_src)
-            cv2.waitKey(0)
+        #if rect.any():
+        #    cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+        #    cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+        #    cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+        #    cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+        #    cv2.imshow('found', bgr_src)
+        #    cv2.waitKey(0)
         #imgs = np.stack((roi, roi2), axis=0)
         #search_batch(src_imgs=imgs, roi_size=0)
 
