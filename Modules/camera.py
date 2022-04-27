@@ -40,17 +40,17 @@ class Camera(QObject):
 from harvesters.core import Harvester
 from platform import system
 if __name__ == '__main__':
-    #h = Harvester()
-    #if system() == 'Linux':
-    #    h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
-    #else:
-    #    h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
-    #h.update()
-    #ia = h.create_image_acquirer(0)
+    h = Harvester()
+    if system() == 'Linux':
+        h.add_file('/opt/mvIMPACT_Acquire/lib/x86_64/mvGenTLProducer.cti')
+    else:
+        h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
+    h.update()
+    ia = h.create_image_acquirer(serial_number='S1101390')
     #ia2 = h.create_image_acquirer(1)
-    #ia.start()
+    ia.start()
     ##ia2.start()
-    #c = Camera(ia=ia)
+    c = Camera(ia=ia)
     #c2 = Camera(ia=ia2)
     from Modules.Robot import Robot
     from Modules.parse import CfgManager
@@ -58,14 +58,25 @@ if __name__ == '__main__':
     cfg = cfgManager.cfg
     robot = Robot(cfg=cfg)
     robot.start()  # 不停发送系统状态
+    robot.set_light_on()
 
     count = 0
     from time import sleep
+    h = 11
+    w = 8
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     while True:
-        #img = c.capture()
-        robot.set_light_on()
-        robot.set_move_vec([1.2, 1.3, 1.4, 1.5, 1.6, 1.7])
-        robot.set_calibrate_req(0)
+        img = c.capture()
+        bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        img = 255 - img
+        ret, corners = cv2.findChessboardCorners(img, (w, h), None)
+        if ret:
+            corners2 = cv2.cornerSubPix(img, corners, (51, 51), (-1, -1), criteria)
+            # Draw and display the corners
+            cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
+        bgr_img = cv2.resize(bgr_img, None, fx=0.5, fy=0.5)
+        cv2.imshow('src', bgr_img)
+        cv2.waitKey(1000)
         #if img is not None:
         ##img2 = c2.capture()
         #    cv2.imshow('df', cv2.resize(img, None, fx=0.5, fy=0.5))

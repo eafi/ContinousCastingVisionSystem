@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QMessageBox, QPushButton, QHBoxLayout, QTex
 from Modules.Robot import Robot
 from Modules.LOG import *
 import cv2
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 from Modules.calibration import calibration
 import os
 from time import sleep
@@ -41,6 +41,7 @@ class CalibrateWidget(QWidget):
 
         self.setLayout(layout2)
 
+
 class Calibration(QThread):
     def __init__(self, cfg, parent):
         super(Calibration, self).__init__()
@@ -55,18 +56,26 @@ class Calibration(QThread):
         self.parent = parent
         self.robot = Robot(cfg)  # 与PLC通讯相关
         self.robot.start()
+        self.robot.set_light_on()
         self.robot.systemStateChange.connect(self.init_system_state_change)
         # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
         # p0 = x, y, z, al, be, ga
         self.robotRealPos = [] # 真实末端位置（来自PLC）
         self.pos_cnt = 0 # 用于记录当前发送到哪一个点了
-        self.pos_cnt_limit = 4 # 极限运动次数
+        self.pos_cnt_limit = 20 # 极限运动次数
         self.calibrateState = -1  # init初始化态： 检查网络并且等待Robot空闲
         self.is_calibrating_flag = False # 正在进行单次标定，用于阻塞不断允许标定的PLC通讯
         self.is_auto_cali = False
+        self.lst_txt = ''
+
 
     def show_text_state(self, txt):
-        self.calibrateWidget.stateText.setText(txt)
+        if self.is_auto_cali:
+            return
+        if self.lst_txt == txt:
+            return
+        self.lst_txt = txt
+        self.calibrateWidget.stateText.setPlainText(txt)
 
 
     def slot_next_pos_btn(self):
@@ -109,11 +118,11 @@ class Calibration(QThread):
         自动化标定 SLOT函数
         """
         if not self.is_auto_cali:
-            ret = QMessageBox.warning(self, self.tr('Warning!'),
-                                      self.tr('Are you sure to calibrate automatically?'), QMessageBox.No, QMessageBox.Yes)
-            if ret == QMessageBox.Yes:
-                self.is_auto_cali = True
-                self.calibrateState = 4  # 进入全自动标定状态
+            #ret = QMessageBox.warning(self, self.tr('Warning!'), self.tr('Are you sure to calibrate automatically?'), QMessageBox.No, QMessageBox.Yes)
+            #if ret == QMessageBox.Yes:
+            self.is_auto_cali = True
+            self.calibrateState = 4  # 进入全自动标定状态
+            self.show_text_state('automatic calibrating...')
         else:
             # 注意！ 当已经是全自动标定状态时，再次点击该按钮将触发回到静止状态
             self.calibrateState = -1
@@ -154,14 +163,15 @@ class Calibration(QThread):
                     # 不允许点击下一个动作，需要等拍摄完毕后再允许(由slot_capture_btn函数触发)
                     self.calibrateWidget.nextPosBtn.setDisabled(True)
                 else:
-                    sleep(3) # 等待机器人到位的延时
+                    sleep(5)  # 等待机器人到位的延时
                     # 全自动标定, 自动拍摄图像
                     self.slot_capture_btn()
+                    #self.calibrateWidget.captureBtn.clicked.emit()
 
             elif self.calibrateState == 4: # 全自动标定状态, 此时关闭所有的按钮
-                self.show_text_state('automatic calibrating...')
                 self.calibrateWidget.nextPosBtn.setDisabled(True)
                 self.calibrateWidget.captureBtn.setDisabled(True)
+                #self.calibrateWidget.nextPosBtn.clicked.emit()
                 self.slot_next_pos_btn()
 
 

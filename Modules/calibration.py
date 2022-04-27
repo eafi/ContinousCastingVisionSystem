@@ -110,7 +110,7 @@ def hand_eye_calibration(A, C, flag=1):
 #    hand_eye_cla(A, C, 0)
 
 
-def camera_calibration(images, grid=(11, 8), width=30, prior_im=None):
+def camera_calibration(images, grid=(11,8), width=30, prior_im=None):
     """
     张正友标定
     :param images: image files path
@@ -145,7 +145,7 @@ def camera_calibration(images, grid=(11, 8), width=30, prior_im=None):
             #cv2.waitKey(0)
     if prior_im is not None:
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], prior_im, None,
-                                                           flags=cv2.CALIB_USE_INTRINSIC_GUESS| cv2.CALIB_ZERO_TANGENT_DIST | cv2.CALIB_FIX_INTRINSIC)
+                                                           flags=cv2.CALIB_USE_INTRINSIC_GUESS| cv2.CALIB_ZERO_TANGENT_DIST)
     else:
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None, flags=cv2.CALIB_ZERO_TANGENT_DIST)
     # print(rvecs, tvecs)
@@ -270,42 +270,11 @@ from scipy import io
 if __name__ == '__main__':
     #path = 'E:/home/eafi/ca'
     #path = 'C:/Users/xjtu/Desktop/imgs/imgs/circiels'
-    path = 'C:/Users/xjtu/Desktop/4'
+    path = 'C:/Users/001/Desktop/1'
     ###path = 'C:/Users/xjtu/Desktop/ca'
-    file_list = glob.glob(path+'Left/-*.bmp')
-    #prior_im = io.loadmat('E:/home/eafi/ca/matlab.mat')['x']
-    #camera_calibration(img_files, prior_im)
-
-    # 1. 机器人位姿数据所在文件夹
-    source_dir = 'Pose'
-    file_list = glob.glob(source_dir + '/*.txt')
-    data_pose = []
-
-    # 2. 读取以逗号分割的数据，并转化为4x4矩阵格式
-    for file_name in file_list:
-        with open(file_name, 'r') as f:
-            data = f.readline()
-            x = [float(x) for x in data.split(',')[:-1]]
-
-            eular = R.from_euler('xyz', x[-3:], degrees=True)
-            trans = np.array(x[:3])
-            m = np.zeros((4, 4))
-            m[:3, :3] = eular.as_matrix()
-            m[:3, 3] = trans
-            m[3, 3] = 1.0
-            data_pose.append(m)
-    data_pose = np.array(data_pose, dtype=np.float32).reshape(-1, 4)
-    # print(data_pose.shape)
-
-    # io.savemat('data_pose.mat', {'pose': data_pose})
-    # 3. 载入相机外参
-    mat = io.loadmat('extern.mat')
-    A = np.array(mat['extern'], np.float32)
-    print(A[:4, :])
-    from eye_cal import hand_eye_cla
-    print(data_pose.shape)
-    print(A.shape)
-    hand_eye_cla(data_pose, A, 1)
+    file_list = glob.glob(path+'/Left-*.bmp')
+    prior_im = io.loadmat(path+'/matlab.mat')['intern_mat']
+    camera_calibration(file_list, prior_im=prior_im)
 
 
     #rect_camera_calibration(path)
