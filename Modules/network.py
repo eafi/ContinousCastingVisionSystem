@@ -56,7 +56,7 @@ class AbstractMsg(QObject):
         if res is None:
             res = [np.uint32(0), np.float(0.0), np.float(0.0)]
         try:
-            print('[Info] Pack:', ctl, mov, res)
+            #print('[Info] Pack:', ctl, mov, res)
             mov = mov[::-1]
             #res = res[::-1]
             res[0] = 2.1
@@ -130,7 +130,7 @@ class Network(QThread):
                             #if s not in outputs:
                             #    outputs.append(s)
                         else: # 没有数据
-                            print('closing', client_address)
+                            #print('closing', client_address)
                             self.robotCommunicationStatusSignal.emit('Break')
                             if s in self.outputs:
                                 self.outputs.remove(s)
@@ -142,7 +142,7 @@ class Network(QThread):
                     try:
                         next_msg = self.message_queues[s].get_nowait()
                     except queue.Empty:
-                        print(' ', s.getpeername(), 'queue empty()')
+                        #print(' ', s.getpeername(), 'queue empty()')
                         self.outputs.remove(s)  # 该套接子没有要发送的内容，关闭套接子
                     else:
                         #print(' sending {!r} to {}'.format(next_msg, s.getpeername()))

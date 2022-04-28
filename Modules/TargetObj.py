@@ -38,7 +38,7 @@ class TargetObj(QObject):
         self.rects.append(rect)
         err = np.sum(np.var(self.rects, axis=0))
         print('curr error: ', err)
-        if err < 0.01:
+        if err < 0.15:
             # 标定板静止
             self.isStable = True
             print(self.roi_name, 'Stable============================================')

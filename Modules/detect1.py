@@ -23,7 +23,7 @@ class Detect:
 
 
     def detect(self):
-        path = '.cache'
+        path = '../.cache'
         while True:
             files = glob.glob(path+'/*.bmp')
             for file in files:

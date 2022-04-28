@@ -75,7 +75,7 @@ class CoreSystem(QThread):
             #####################################################################################################
             elif self.coreSystemState == 1:  # PLC命令启动检测,返回能源介质接头坐标
                 self.detect_enable = True
-                self.roi_name = 'LeftCameraTopROI'
+                self.roi_name = 'LeftCameraLeftROI'
             elif self.coreSystemState == 2:  # PLC命令启动检测，返回水口安装坐标
                 self.roi_name = 'LeftCameraTopROI'
             elif self.coreSystemState == 3:  # 请求滑板液压缸坐标
@@ -123,7 +123,7 @@ class CoreSystem(QThread):
 
     def core_resource_cfg(self):
         if not initClass.cfgInit:
-            self.cfgManager = CfgManager(path='CONF.cfg')
+            self.cfgManager = CfgManager(path='../CONF.cfg')
             self.cfg = self.cfgManager.cfg
             initClass.cfgInit = True
 
@@ -162,10 +162,12 @@ class CoreSystem(QThread):
             initClass.robotInit = True
 
     def core_sys_state_change(self, state, datalst):
-        self.coreSystemState = state
+        #self.coreSystemState = state
+        # TODO: Delete this line below, this is a fake PLC command only using for debug.
+        self.coreSystemState = 1
 
     def detect_res_reader(self):
-        path = '.cache'
+        path = '../.cache'
         files = glob.glob(path + '/*.npy')
         for file in files:
             print(file)
@@ -197,4 +199,4 @@ class CoreSystem(QThread):
             img = self.camera_1.im_np  # 左相机图像
             roi = self.cfg['ROIs_Conf'][self.roi_name]  # 提取当前系统阶段所需要的ROI区域
             roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-            cv2.imwrite(f'.cache/{self.roi_name}-{time.time()}.bmp', roi_img)
+            cv2.imwrite(f'../.cache/{self.roi_name}-{time.time()}.bmp', roi_img)
