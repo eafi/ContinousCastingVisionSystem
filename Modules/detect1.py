@@ -18,14 +18,18 @@ from collections import deque
 
 
 class Detect:
-    def __init__(self):
+    def __init__(self, cache_path):
         super(Detect, self).__init__()
+        self.cache_path = cache_path # 检测的缓冲图像文件夹
+        for file_path, _, file_name in os.walk(self.cache_path):
+            for name in file_name:
+                os.remove(os.path.join(file_path, name))
+
 
 
     def detect(self):
-        path = '../.cache'
         while True:
-            files = glob.glob(path+'/*.bmp')
+            files = glob.glob(self.cache_path+'/*.bmp')
             for file in files:
                 print('file found!')
                 img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
@@ -44,7 +48,7 @@ class Detect:
                 os.remove(file)
                 if rect.size != 0:
                     split_name = os.path.splitext(os.path.basename(file))[0]
-                    save_path = os.path.join(path, split_name)+'.npy'
+                    save_path = os.path.join(self.cache_path, split_name)+'.npy'
                     np.save(save_path, rect)
                 # self.returnValSignal.emit(rect)  # 向CoreSystem发送检测结果，在system.py-detect()中绑定
 

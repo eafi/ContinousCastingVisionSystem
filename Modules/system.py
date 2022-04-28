@@ -45,10 +45,10 @@ class CoreSystem(QThread):
         self.targetObjs = {}  # 检测到的目标rect，用于检测target是否运动等信息，与TargetObj.py相关的操作
         self.tmpThread = None
         self.detect_enable = False
+
         self.detect_timers = QTimer()
         self.detect_timers.timeout.connect(self.detect_img_prompt)
         self.detect_timers.timeout.connect(self.detect_res_reader)
-        self.detect_timers.start(500)
 
     def run(self):
         """
@@ -117,14 +117,20 @@ class CoreSystem(QThread):
         self.core_resource_torch()
         # 机器人通讯资源
         self.core_resource_robot()
-        self.d = Detect()
+
+        # =================  多进程检测 ================== #
+        self.d = Detect(self.cache_path)
         self.p = Process(target=self.d.detect)
         self.p.start()
+        self.detect_timers.start(500)
 
     def core_resource_cfg(self):
         if not initClass.cfgInit:
-            self.cfgManager = CfgManager(path='../CONF.cfg')
+            self.cfgManager = CfgManager(path='CONF.cfg')
             self.cfg = self.cfgManager.cfg
+
+            # 检测的缓冲图像文件夹
+            self.cache_path = self.cfg['System_Conf']['CachePath']
             initClass.cfgInit = True
 
     def core_resource_cameras(self):
@@ -139,10 +145,10 @@ class CoreSystem(QThread):
             print(self.h.device_info_list)
             # DEBUG
 
-            self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
-            self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
-            #self.camera_1 = self.h.create_image_acquirer(0)
-            #self.camera_2 = self.h.create_image_acquirer(1)
+            #self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
+            #self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
+            self.camera_1 = self.h.create_image_acquirer(0)
+            self.camera_2 = self.h.create_image_acquirer(1)
             self.camera_1.start()
             self.camera_2.start()
             initClass.cameraInit = True
@@ -167,8 +173,7 @@ class CoreSystem(QThread):
         self.coreSystemState = 1
 
     def detect_res_reader(self):
-        path = '../.cache'
-        files = glob.glob(path + '/*.npy')
+        files = glob.glob(self.cache_path + '/*.npy')
         for file in files:
             print(file)
             split_name = os.path.splitext(os.path.basename(file))[0].split('-')
