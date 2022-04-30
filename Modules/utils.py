@@ -12,7 +12,7 @@ def vecs2trans(rvec, tvec):
     trans = np.zeros((4, 4))
     rot, jac = Rodrigues(rvec)
     trans[:3, :3] = rot
-    trans[:3, 3] = tvec.reshape(1, -1)
+    trans[:3, 3] = tvec.T
     trans[3, 3] = 1.0
     return trans
 

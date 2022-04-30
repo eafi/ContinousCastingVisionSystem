@@ -8,18 +8,6 @@ Email: imeafi@gmail.com
 import cv2
 import numpy as np
 
-cameraMatrx = np.array([
-    1.2747839171870191e+03, 0., 7.5065264578273377e+02,
-    0., 1.2747839171870191e+03, 4.8218924048281150e+02,
-    0., 0., 1.], dtype=np.float32).reshape((3, 3))
-cameraDist = np.array([
-    -4.3548568186999093e-01,
-    -2.1458383855925608e-01,
-    -1.6018451329051601e-02,
-    4.8998216858418845e-03,
-    3.9005144897469193e+00], dtype=np.float32).reshape((1, 5))
-
-
 def draw(img, corners, imgpts):
     """
     绘制目标物体的物体坐标系原点轴系.
@@ -47,6 +35,8 @@ def get_four_points(width=55, height=50, vertical=True):
     else:
         objp[:, :2] = np.array(((0, 0), (width, 0), (width, height), (0, height)), dtype=np.float32)
     return objp
+
+
 
 
 def get_nozzle_points(side):
@@ -77,23 +67,6 @@ def draw_nozzle(img, corners, imgpts):
     img = cv2.line(img, corners[0].astype(np.int32), tuple(imgpts[0].ravel().astype(np.int32)), (255,255,0), 5)
     return img
 
-
-
-def pnp(rect, mtx=cameraMatrx, dist=cameraDist, objp=None):
-    """
-    利用找到的四个点，以及理想的objp，结合相机参数计算出姿态信息
-    :param objp:
-    :param rect:
-    :param mtx:
-    :param dist: 畸变
-    :return:
-    """
-    axis = np.float32([[50, 0, 0], [0, 50, 0], [0, 0, -50]]).reshape(-1, 3)
-    if objp is None:
-        objp = get_four_points()
-    ret, rvecs, tvecs = cv2.solvePnP(objp, rect, mtx, dist)
-    imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
-    return imgpts, rvecs, tvecs
 
 
 

@@ -17,6 +17,7 @@ class CoreSystemCameraWidget(BaseCameraWidget):
         self.isDrawTargets = True
 
 
+
     def paintEvent(self, event):
         super(CoreSystemCameraWidget, self).paintEvent(event=event)  # 绘制基本Camera图像
         # ========================================================================================== #

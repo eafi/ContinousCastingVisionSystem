@@ -11,30 +11,35 @@ class BaseCameraWidget(QWidget):
     cameraStatusSignal = pyqtSignal(str)
 
     def __init__(self, cfg, cameraType, harvesters):
+        """
+
+        :param cfg:
+        :param cameraType:相机的类型， LeftCamera or RightCamera
+        :param harvesters:
+        :param mtx: 当为初始化时，并不需要反畸变
+        :param dist:
+        """
         super(BaseCameraWidget, self).__init__()
         self.im_np = None
         self.fps = 66
-        self.cameraType = cameraType # 相机的类型， LeftCamera or RightCamera
+        self.cameraType = cameraType
         self.ia = harvesters
 
         # 是否绘制ROIs
         self.isDrawROIs = False
 
-        calibrationmtx = cfg['HandEyeCalibration_Conf']
-        self.mtx = calibrationmtx[f'{cameraType}Matrix']
-        self.dist = calibrationmtx[f'{cameraType}Dist']
+        lr_name = self.cameraType.split('Camera')[0]
         self.init()
 
 
-    def status(self):
+
+    def status_update(self):
         """
         定时发送相机状态. 并且读取一帧图像
         :return:
         """
         if self.camera is not None:
             self.im_np = self.camera.capture()
-            # 矫正
-            self.im_np = cv2.remap(self.im_np, self.mapx, self.mapy, cv2.INTER_LINEAR)
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
                 self.cameraStatusSignal.emit('OK')
@@ -61,11 +66,11 @@ class BaseCameraWidget(QWidget):
         5. 是否绘制Targets变量 = False
         :return:
         """
+
+
         self.setWindowTitle(self.cameraType)
         self.try_init_camera()
-        #self.statuTimer = QTimer()
         self.paintTimer = QTimer()
-        #self.statuTimer.start(self.fps)
         self.paintTimer.start(self.fps)
 
         self.paintTimer.timeout.connect(self.update)  # 定时更新画面
@@ -84,12 +89,7 @@ class BaseCameraWidget(QWidget):
             self.im_np = self.camera.capture()
             if self.im_np is not None:
                 self.h, self.w = self.im_np.shape
-
                 self.cameraStatusSignal.emit('OK')
-                # 明确相机的畸变和内参数矩阵
-                self.newCameramtx, roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.w, self.h), 1, (self.w, self.h))
-                # 重映射矩阵
-                self.mapx, self.mapy = cv2.initUndistortRectifyMap(self.mtx, self.dist, None, self.newCameramtx, (self.w, self.h), 5)
                 self.resize(self.w, self.h)
             #self.camera = fakeCamera.Camera()  # 调试用
             LOG(log_types.OK, self.tr(self.cameraType+': Camera Init OK.'))
@@ -107,7 +107,7 @@ class BaseCameraWidget(QWidget):
         :param event:
         :return:
         """
-        self.status()
+        self.status_update()
         if self.camera is not None and self.im_np is not None:
             painter = QPainter()
             painter.begin(self)

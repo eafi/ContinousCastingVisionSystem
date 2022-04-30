@@ -15,7 +15,7 @@ from Modules.LOG import *
 # from Modules.detect1 import Detection1
 from PyQt5.QtCore import pyqtSignal, QThread, QTimer, QProcess
 from multiprocessing import Process
-from Modules.TargetObj import TargetObj
+from Modules.ObjTracker import ObjTracker
 from Modules.Robot import Robot
 from time import sleep
 from harvesters.core import Harvester
@@ -173,6 +173,10 @@ class CoreSystem(QThread):
         self.coreSystemState = 1
 
     def detect_res_reader(self):
+        """
+        对检测到的npy文件进行文件名(which camera which roi?)和检测内容解析，
+        :return:
+        """
         files = glob.glob(self.cache_path + '/*.npy')
         for file in files:
             print(file)
@@ -182,11 +186,11 @@ class CoreSystem(QThread):
             rect = np.load(file)
             os.remove(file)
 
-            # 从局部ROI返回到全局ROI坐标
+            # !!从局部ROI返回到全局ROI坐标
             rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
             # 将发现载入标定板绑定对象:
             if roi_name not in self.targetObjs.keys():  # 全新找到的对象
-                self.targetObjs[roi_name] = TargetObj(rect, roi_name)
+                self.targetObjs[roi_name] = ObjTracker(rect, roi_name)
             else:
                 # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
                 self.targetObjs[roi_name].step(rect)
@@ -201,7 +205,7 @@ class CoreSystem(QThread):
         :return:
         """
         if self.detect_enable:
-            img = self.camera_1.im_np  # 左相机图像
+            img = self.camera_1.im_np  # 左相机图像反畸变结果
             roi = self.cfg['ROIs_Conf'][self.roi_name]  # 提取当前系统阶段所需要的ROI区域
             roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
             cv2.imwrite(f'../.cache/{self.roi_name}-{time.time()}.bmp', roi_img)

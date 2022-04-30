@@ -20,7 +20,6 @@ if system() == 'Linux':
 else:
     open = functools.partial(open, encoding='utf-8')
 
-
 class CfgManager(QObject):
     cfgUpdateSignal = pyqtSignal()
     def __init__(self, path):
@@ -36,7 +35,6 @@ class CfgManager(QObject):
         :return:
         """
         self.cfg = parse_cfg(self.path)
-        parse_resources_cfg(self)
         parse_target_ref(self)
         parse_roi_rect(self)  # 读取ROI rect信息
         parse_network(self)
@@ -71,61 +69,36 @@ def parse_cfg(path: str):
     return mdefs
 
 
-def parse_resources_cfg(obj):
-    """
-    解析CFG文件的系统资源分配.
-    注意！ 调用配置应该在cfg文件发生变更时，以及系统初始化时重新调用一次.
-    :param obj: 包含了self.cfg的对象. 默认情况下应该是mainUI对象
-
-    """
-    assert 'Resources_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Resources Configuration.'))
-    # 线程资源, 单相机最多检测线程数量。 每一张图像就开启了三个线程。
-    cfg = obj.cfg['Resources_Conf']['ThreadResource']
-    if 'mid' in cfg:
-        obj.DETECT_CFG_THREADS = 16
-    elif 'high' in cfg:
-        obj.DETECT_CFG_THREADS = 32
-    elif 'low' in cfg:
-        obj.DETECT_CFG_THREADS = 8
-
-
-
-
 def parse_target_ref(obj):
     """
     解析CFG文件： 每一个标定板与目标刚体的转换矩阵
     :param obj: 包含了self.obj的对象
     :return:
     """
-    assert 'RectRef2Target_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
+    assert 'Tar2Board_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Ref Configuration.'))
     from scipy.spatial.transform import Rotation as R
-    for key in obj.cfg['RectRef2Target_Conf']:
-        obj.cfg['RectRef2Target_Conf'][key] = [float(x) for x in obj.cfg['RectRef2Target_Conf'][key].split(',')]
-        eular = R.from_euler('xyz', [obj.cfg['RectRef2Target_Conf'][key][-3:]])
-        trans = np.array(obj.cfg['RectRef2Target_Conf'][key][:3])
+    for key in obj.cfg['Tar2Board_Conf']:
+        obj.cfg['Tar2Board_Conf'][key] = [float(x) for x in obj.cfg['Tar2Board_Conf'][key].split(',')]
+        eular = R.from_euler('xyz', [obj.cfg['Tar2Board_Conf'][key][-3:]])
+        trans = np.array(obj.cfg['Tar2Board_Conf'][key][:3])
         m = np.zeros((4,4))
         m[:3,:3] = eular.as_matrix()
         m[:3, 3] = trans
         m[3,3] = 1.0
-        obj.cfg['RectRef2Target_Conf'][key] = m
+        obj.cfg['Tar2Board_Conf'][key] = m
 
 def parse_robot_camera_matrix(obj):
     """
-    1. 解析手眼标定结果
-    2. 相机内参数和k3畸变结果
+    确定各个标定文件是否存在, 并读取该文件
     :param obj:
     :return:
     """
-    assert 'HandEyeCalibration_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find HandEyeCalibration Configuration.'))
-    for key in obj.cfg['HandEyeCalibration_Conf']:
-        obj.cfg['HandEyeCalibration_Conf'][key] = np.array([float(x)  \
-                    for x in obj.cfg['HandEyeCalibration_Conf'][key].split(',')])
-        if 'CameraMatrix' in key:
-            obj.cfg['HandEyeCalibration_Conf'][key] = \
-                obj.cfg['HandEyeCalibration_Conf'][key].reshape(3, 3)
-        elif 'HandEyeMatrix' in key:
-            obj.cfg['HandEyeCalibration_Conf'][key] = \
-                obj.cfg['HandEyeCalibration_Conf'][key].reshape(4, 4)
+    assert 'Calibration_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Calibration Configuration.'))
+    for key in obj.cfg['Calibration_Conf']:
+        val = obj.cfg['Calibration_Conf'][key]
+        assert os.path.exists(val)
+        obj.cfg['Calibration_Conf'][key] = np.load(val)
+
 
 
 

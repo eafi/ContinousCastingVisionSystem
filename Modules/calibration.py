@@ -110,11 +110,14 @@ def hand_eye_calibration(A, C, flag=1):
 #    hand_eye_cla(A, C, 0)
 
 
-def camera_calibration(images, grid=(11,8), width=30, prior_im=None):
+def camera_calibration(images, grid=(11,8), width=30):
     """
     张正友标定
     :param images: image files path
-    :return:
+    :return:mtx: 相机内参矩阵
+    dist: 畸变矩阵
+    rvecs, tvecs 旋转外参和平移外参
+    mask: 并非所有images都能检测到外参数，标记并排除找不到外参的图像
     """
     h, w = grid
     # termination criteria
@@ -131,24 +134,20 @@ def camera_calibration(images, grid=(11,8), width=30, prior_im=None):
         img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
         img = 255 - img
         bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        ret, corners = cv2.findChessboardCorners(img, (w, h), None)
+        ret, corners = cv2.findChessboardCorners(img, (h, w), None)
         print(fname)
         if ret == True:
             mask[idx] = 1
             objpoints.append(objp)
-            corners2 = cv2.cornerSubPix(img, corners, (51, 51), (-1, -1), criteria)
-            imgpoints.append(corners)
+            corners2 = cv2.cornerSubPix(img, corners, (11, 11), (-1, -1), criteria)
+            imgpoints.append(corners2)
             # Draw and display the corners
-            cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
+            #cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
             #cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
             #print(fname, 'OK')
             #cv2.waitKey(0)
-    if prior_im is not None:
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], prior_im, None,
-                                                           flags=cv2.CALIB_USE_INTRINSIC_GUESS| cv2.CALIB_ZERO_TANGENT_DIST)
-    else:
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None, flags=cv2.CALIB_ZERO_TANGENT_DIST)
-    # print(rvecs, tvecs)
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
+    print(rvecs, tvecs)
     print(mtx, dist)
 
     mean_error = 0
@@ -157,44 +156,65 @@ def camera_calibration(images, grid=(11,8), width=30, prior_im=None):
         error = cv2.norm(imgpoints[i], imgpoints2, cv2.NORM_L2) / len(imgpoints2)
         mean_error += error
     print("total error: {}".format(mean_error / len(objpoints)))
-    return mtx, dist, rvecs, tvecs, mask
+    tar2cam_r = []
+    for rvec in rvecs:
+        tar2cam_r.append(cv2.Rodrigues(rvec)[0])
+    return mtx, dist, tar2cam_r, tvecs, mask
 
 import glob
+import os
 from Modules.utils import vecs2trans
-def calibration(robotPos, grid=(11, 8), width=30):
+def calibration():
     """
-    :param robotMovePos: 机械臂移动末端位置
-    :param grid: 棋盘格数量
-    :param width: 棋盘格宽度(mm)
     1. 打开所有图像文件
     2. 相机标定, 返回外参数矩阵
     3. 手眼标定
     NOTE: 有两个相机，因此需要标定两次。
     :return:
     """
+    #ca_path = '../CalibrationImages' # 标定保存的图像和pos.txt文件夹
+    ca_path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/today_manual_2'
+    sort_f = lambda x: int(os.path.splitext(os.path.basename(x))[0].split('-')[1])
+    pos_files = glob.glob(f'{ca_path}/pos-*.txt')
+    pos_files.sort(key=sort_f)
     for whichCamera in ['Left', 'Right']:
-        images = glob.glob(f'../CalibrationImages/{whichCamera}-*.png')
-        images = sorted(images)  # 必须要按照编号顺序，因为要与机械臂末端位置一一对应
-        mtx, dist, rvecs, tvecs = camera_calibration(images=images)
-        # 将一一计算出来的外参数转换成手眼标定能够识别的矩阵
-        rvecs = np.array(rvecs).squeeze()
-        tvecs = np.array(tvecs).squeeze()
-        C = []
-        for rvec, tvec in zip(rvecs, tvecs):
-            trans = vecs2trans(rvec=rvec, tvec=tvec) # 向量转矩阵
-            C.append(trans)
-        C = np.array(C).reshape(-1, 4)
-        A = []
-        for pts in robotPos:
-            tvec = np.array(pts[:3])
-            rvec = np.array(pts[3:])
-            trans = vecs2trans(rvec=rvec, tvec=tvec)
-            A.append(trans)
-        A = np.array(A).reshape(-1, 4)
-        # 手眼标定
-        hand_eye_calibration(A, C)
+        img_files = glob.glob(f'{ca_path}/{whichCamera}-*.bmp')
+        img_files.sort(key=sort_f) # 必须要按照编号顺序，因要与机械臂末端位置一一对应
+        mtx, dist, tar2cam_r, tar2cam_t, mask = camera_calibration(images=img_files)
+        h, w = cv2.imread(img_files[0], cv2.IMREAD_GRAYSCALE).shape
+        #newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
+        np.save(f'../{whichCamera}_camera_matrix.npy', mtx)
+        #np.save(f'{whichCamera}_camera_newmatrix.npy', newcameramtx)
+        #np.save(f'{whichCamera}_camera_roi.npy', roi)
+        np.save(f'../{whichCamera}_camera_dist.npy', dist)
+        # ========== Hand Eye Calibration =============
+        from scipy.spatial.transform import Rotation as R
+        base2gri_r = []
+        base2gri_t = []
+        for pos_file, msk in zip(pos_files, mask):
+            if msk == 0:
+                continue
+            f = open(pos_file, 'r')
+            line = f.readline().split(',')[:-1]
+            data = np.array([float(x) for x in line], dtype=np.float64)
+            eluar = R.from_euler('ZYX', data[3:], degrees=True)
 
+            matrix_r = eluar.as_matrix()
+            trans = np.array(data[:3]).reshape(3, 1)
+            trans = -matrix_r.transpose() @ trans
 
+            base2gri_r.append(matrix_r.transpose())
+            base2gri_t.append(trans)
+
+        cam2base_r, cam2base_t = cv2.calibrateHandEye(R_target2cam=tar2cam_r, t_target2cam=tar2cam_t,
+                                                      R_gripper2base=base2gri_r, t_gripper2base=base2gri_t,
+                                                      method=cv2.CALIB_HAND_EYE_TSAI)
+        m = np.zeros((4,4))
+        m[:3, :3] = cam2base_r
+        m[:3, 3] = cam2base_t.T
+        m[3, 3] = 1.0
+        np.save(f'../{whichCamera}_hand_eye_matrix.npy', m)
+        print(whichCamera, cam2base_r, cam2base_t)
 
 def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
     """
@@ -268,13 +288,10 @@ def rect_camera_calibration(file_path='F:/Dataset/FakeCamera'):
 
 from scipy import io
 if __name__ == '__main__':
-    #path = 'E:/home/eafi/ca'
+    path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/today_manual_2'
     #path = 'C:/Users/xjtu/Desktop/imgs/imgs/circiels'
-    path = 'C:/Users/001/Desktop/1'
     ###path = 'C:/Users/xjtu/Desktop/ca'
-    file_list = glob.glob(path+'/Left-*.bmp')
-    prior_im = io.loadmat(path+'/matlab.mat')['intern_mat']
-    camera_calibration(file_list, prior_im=prior_im)
 
+    calibration()
 
     #rect_camera_calibration(path)
