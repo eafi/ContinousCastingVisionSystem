@@ -142,10 +142,10 @@ def camera_calibration(images, grid=(11,8), width=30):
             corners2 = cv2.cornerSubPix(img, corners, (11, 11), (-1, -1), criteria)
             imgpoints.append(corners2)
             # Draw and display the corners
-            #cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
-            #cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
-            #print(fname, 'OK')
-            #cv2.waitKey(0)
+            cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
+            cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
+            print(fname, 'OK')
+            cv2.waitKey(33)
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
     print(rvecs, tvecs)
     print(mtx, dist)
@@ -173,7 +173,7 @@ def calibration():
     :return:
     """
     #ca_path = '../CalibrationImages' # 标定保存的图像和pos.txt文件夹
-    ca_path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/today_manual_2'
+    ca_path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/111'
     sort_f = lambda x: int(os.path.splitext(os.path.basename(x))[0].split('-')[1])
     pos_files = glob.glob(f'{ca_path}/pos-*.txt')
     pos_files.sort(key=sort_f)

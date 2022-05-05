@@ -25,7 +25,7 @@ class ObjTracker(QObject):
     def __init__(self, cfg, rect, roi_name):
         """
         :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
-        :param roi_name: e.g. LeftCameraLeftROI
+        :param roi_name: e.g. LeftCameraLeftROI,将会根据左右相机读取指定相机参数、手眼参数
         """
         self.rects = deque(maxlen=10)
         self.rects.append(rect)
@@ -105,8 +105,8 @@ class ObjTracker(QObject):
 
         if isinstance(tar2board, list):
             tar2base = []
-            tar2base.append(self.camera2base @ board2camera @ tar2board[0])
-            tar2base.append(self.camera2base @ board2camera @ tar2board[1])
+            tar2base.append(board2camera @ tar2board[0])
+            tar2base.append(board2camera @ tar2board[1])
         else:
             tar2base = self.camera2base @ board2camera @ tar2board
 
@@ -116,25 +116,29 @@ class ObjTracker(QObject):
 if __name__ == '__main__':
     from parse import CfgManager
     cfg = CfgManager('../CONF.cfg').cfg
-    img = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
-    img = glob.glob(img+'/*.png')[0]
-    img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-    img = img[800:800+768, 2560-768:]
-    cv2.imshow('img', img)
-    cv2.waitKey(0)
-    from Detection_1.search import search
-    rect = search(img, roi_size=0)
-    roi_name = 'LeftCameraTopROI'
-    # 注意，单元测试时，需要把ROI返还回全局相机成像平面坐标系下
-    rect = rect + np.array((2560-768, 800))
-    print(rect)
-    tracker = ObjTracker(rect=rect, roi_name=roi_name, cfg=cfg)
+    src_img = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228/left.png'
+    src_img = cv2.imread(src_img, cv2.IMREAD_GRAYSCALE)
+    ms = []
+    for x, cam in zip([300, 1792], ['Left', 'Right']):
+        img = src_img[800:800+768, x:x+768]
+        cv2.imshow('img', img)
+        cv2.waitKey(0)
+        from Detection_1.search import search
+        rect = search(img, roi_size=0)
+        roi_name = f'LeftCamera{cam}ROI'
+        # 注意，单元测试时，需要把ROI返还回全局相机成像平面坐标系下
+        rect = rect + np.array((x, 800))
+        print(rect)
+        tracker = ObjTracker(rect=rect, roi_name=roi_name, cfg=cfg)
 
-    cnt = 0
-    while True:
-        tracker.step(rect)
-        m = tracker.fetch_posture()
-        if m is not None:
-            print(m)
-            break
-
+        cnt = 0
+        while True:
+            tracker.step(rect)
+            m = tracker.fetch_posture()
+            if m is not None:
+                ms.append(m[0][:2, 3])
+                print(m[0])
+                #np.save('right_camera_left_roi.npy', m)
+                break
+    #print(ms)
+    print(np.linalg.norm(ms[0]-ms[1], ord=2))
