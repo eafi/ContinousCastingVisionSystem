@@ -186,7 +186,8 @@ if __name__ == '__main__':
     from Modules.parse import CfgManager
     cfgManager = CfgManager(path='../CONF.cfg')
     cfg = cfgManager.cfg
-    ms[0] = ms[0] @ tar2board
+    degree = ms[0] @ tar2board # 角度
+
     print(trans2vecs(ms[0]))
     robot = Robot(cfg=cfg)
     robot.start()  # 不停发送系统状态
