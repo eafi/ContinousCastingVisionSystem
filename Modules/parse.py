@@ -79,7 +79,7 @@ def parse_target_ref(obj):
     from scipy.spatial.transform import Rotation as R
     for key in obj.cfg['Tar2Board_Conf']:
         obj.cfg['Tar2Board_Conf'][key] = [float(x) for x in obj.cfg['Tar2Board_Conf'][key].split(',')]
-        eular = R.from_euler('xyz', [obj.cfg['Tar2Board_Conf'][key][-3:]])
+        eular = R.from_euler('ZYX', [obj.cfg['Tar2Board_Conf'][key][-3:]])
         trans = np.array(obj.cfg['Tar2Board_Conf'][key][:3])
         m = np.zeros((4,4))
         m[:3,:3] = eular.as_matrix()

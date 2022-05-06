@@ -18,9 +18,9 @@ def vecs2trans(rvec, tvec):
 
 
 def trans2vecs(trans):
-    eular = R.from_matrix(trans[:3, :3]).as_euler('xyz', degrees=True)  # 外旋角度制
+    eular = R.from_matrix(trans[:3, :3]).as_euler('ZYX', degrees=True)
     trans = trans[:3, 3]
     data = 6 * [np.float32(0.0)]
     data[:3] = trans
-    data[4:] = eular
+    data[3:] = eular
     return data

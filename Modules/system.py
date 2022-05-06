@@ -101,8 +101,8 @@ class CoreSystem(QThread):
             if roi_name in self.targetObjs:
                 m = self.targetObjs[roi_name].fetch_posture()
                 if m is not None:
-                    self.robot.set_system_mode(set_sys_mod)
                     self.robot.set_move_mat(m)
+                    self.robot.set_system_mode(set_sys_mod)
                     self.coreSystemState = 0 # 系统回到静默状态
 
     def core_resources_check(self):

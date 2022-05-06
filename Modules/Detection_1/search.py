@@ -340,49 +340,19 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99
 #
 if __name__ == '__main__':
     print('hello')
-    img_path = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
-    img_files = glob.glob(img_path+'/*.png')
+    #img_path = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
+    src_img = 'C:/Users/001/Desktop/imgs/0.bmp'
+    img_files = [src_img]
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
 
         cv2.imshow('img', img)
-        roi = img[768+100:768*2-300, 300+250:1068-200]
+        roi = img[600:600+768, 0:768]
         bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
         roi = roi.astype(np.float32) / 255.0
         val = 2.0
-        while True:
-            tmp_roi = roi + val * (roi - np.mean(roi))
-            cv2.imshow('roi', tmp_roi)
-            print(val)
-            cv2.waitKey(0)
-            val -= 0.2
-        # 缩小图快速排查rect
-        #kargs = {
-        #    'board_size_range': [25, 50, 1],
-        #    'kernel_size': (25, 25),
-        #    'outer_diameter_range': (10, 25),
-        #    'ring_width_range': (1, 2),
-        #    'ring_threshold': [0.9, 1.0, 0.05],
-        #    'area_threshold': (1, 500),
-        #}
-        #rects = []
-        #start_time = time.time()
-        #rect = search(src_img=roi2, roi_size=0, **kargs)
-        #rects.append(rect)
-        #rect = search(src_img=roi3, roi_size=0, **kargs)
-        #rects.append(rect)
-        #rect = search(src_img=roi4, roi_size=0, **kargs)
-        #rects.append(rect)
-        #rect = search(src_img=roi5, roi_size=0, **kargs)
-        #rects.append(rect)
-        #print(f'time1:{time.time() - start_time}')
-        #print(4.0*np.mean(rects, axis=0))
-
-        #start_time = time.time()
-        #rect = search(src_img=roi, roi_size=0)
-        #print(f'time2:{time.time() - start_time}')
-        #print(rect)
-
+        rect = search(src_img=roi, roi_size=0)
+        print(rect)
         #if rect.any():
         #    cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
         #    cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)

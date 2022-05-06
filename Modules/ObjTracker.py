@@ -19,6 +19,7 @@ import numpy as np
 from collections import deque
 from Modules.Detection_1.utils.PnP import *
 from Modules.utils import vecs2trans
+from Modules.utils import *
 
 
 class ObjTracker(QObject):
@@ -105,8 +106,11 @@ class ObjTracker(QObject):
 
         if isinstance(tar2board, list):
             tar2base = []
-            tar2base.append(board2camera @ tar2board[0])
-            tar2base.append(board2camera @ tar2board[1])
+            #tar2base.append(self.camera2base @ board2camera @ tar2board[0])
+            #tar2base.append(self.camera2base @ board2camera @ tar2board[1])
+            tar2base.append(self.camera2base @ board2camera)
+            tar2base.append(self.camera2base @ board2camera)
+
         else:
             tar2base = self.camera2base @ board2camera @ tar2board
 
@@ -116,18 +120,27 @@ class ObjTracker(QObject):
 if __name__ == '__main__':
     from parse import CfgManager
     cfg = CfgManager('../CONF.cfg').cfg
-    src_img = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228/left.png'
+    #src_img = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228/right.png'
+    src_img = 'C:/Users/001/Desktop/imgs/1.bmp'
     src_img = cv2.imread(src_img, cv2.IMREAD_GRAYSCALE)
     ms = []
-    for x, cam in zip([300, 1792], ['Left', 'Right']):
-        img = src_img[800:800+768, x:x+768]
+    for dx, cam in zip([0, 1300], ['Left']):
+        dh = 700 # ROI的垂直偏移
+        img = src_img[dh:dh+768, dx:dx+768]
         cv2.imshow('img', img)
         cv2.waitKey(0)
         from Detection_1.search import search
-        rect = search(img, roi_size=0)
-        roi_name = f'LeftCamera{cam}ROI'
+        rect = search(img, roi_size=0, ring_threshold=[0.6, 1.0, 0.1])
+        roi_name = f'RightCamera{cam}ROI'
         # 注意，单元测试时，需要把ROI返还回全局相机成像平面坐标系下
-        rect = rect + np.array((x, 800))
+        bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        cv2.line(bgr_img, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+        cv2.line(bgr_img, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+        cv2.line(bgr_img, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+        cv2.line(bgr_img, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+        cv2.imshow('found', bgr_img)
+        cv2.waitKey(0)
+        rect = rect + np.array((dx, dh))
         print(rect)
         tracker = ObjTracker(rect=rect, roi_name=roi_name, cfg=cfg)
 
@@ -136,9 +149,49 @@ if __name__ == '__main__':
             tracker.step(rect)
             m = tracker.fetch_posture()
             if m is not None:
-                ms.append(m[0][:2, 3])
+                ms.append(m[0])
                 print(m[0])
                 #np.save('right_camera_left_roi.npy', m)
                 break
-    #print(ms)
-    print(np.linalg.norm(ms[0]-ms[1], ord=2))
+    #print(np.linalg.norm(ms[0][:3, 3]-ms[1][:3, 3], ord=2))
+    #print(np.linalg.norm(ms[0][:3, :3]-ms[1][:3, :3], ord=2))
+
+    #from utils import trans2vecs
+    #data = trans2vecs(ms[0])
+    #eular = np.array([-17.59, 14.97, 89.83])
+    #delta_eular = eular - data[3:]
+    #print(delta_eular)
+
+
+
+    # 利用矩阵乘法，直接计算出刚体的安装位置到标定板的关系
+    #tar2base = np.array([-80.87, -3237.35, 176.91, -19.96, 14.94, 89.85])
+    #from scipy.spatial.transform import Rotation as R
+    #eular = R.from_euler('ZYX', tar2base[3:],  degrees=True)
+    #tar2base_44 = np.zeros((4,4))
+    #tar2base_44[:3 ,:3] = eular.as_matrix()
+    #tar2base_44[:3, 3] = tar2base[:3].T
+    #tar2base_44[3,3] = 1.0
+
+    #board2base = ms[0]
+    #base2board = np.linalg.inv(board2base)
+
+    #tar2board = (base2board @ tar2base_44)
+
+    tar2board = np.load('../long_nozzle_left_tar2board_44.npy')
+    print(trans2vecs(tar2board))
+
+    #print(trans2vecs(m))
+    from Modules.Robot import Robot
+    from Modules.parse import CfgManager
+    cfgManager = CfgManager(path='../CONF.cfg')
+    cfg = cfgManager.cfg
+    ms[0] = ms[0] @ tar2board
+    print(trans2vecs(ms[0]))
+    robot = Robot(cfg=cfg)
+    robot.start()  # 不停发送系统状态
+    while True:
+        print(trans2vecs(ms[0]))
+        robot.set_move_mat(ms[0])
+        #robot.set_system_mode(2)
+        pass

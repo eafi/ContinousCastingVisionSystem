@@ -59,8 +59,6 @@ class AbstractMsg(QObject):
             #print('[Info] Pack:', ctl, mov, res)
             mov = mov[::-1]
             #res = res[::-1]
-            res[0] = 2.1
-            res[1] = 2.2
             fres = [res[0], res[1]]
             fres = fres[::-1]
             DATA = namedtuple("DATA", "uCtl fData0 fData1 fData2 fData3 fData4 fData5 fRes0 fRes1 uRes2")
@@ -171,11 +169,6 @@ class Network(QThread):
                 LOG(log_types.WARN, self.tr('No connection yet.'))
         except Exception as e:
             print(e.args[0])
-
-
-    def __del__(self):
-        self.server.shutdown()
-        self.server.close()
 
 
 

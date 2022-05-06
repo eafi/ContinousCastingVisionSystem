@@ -46,19 +46,20 @@ if __name__ == '__main__':
     else:
         h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
     h.update()
-    ia = h.create_image_acquirer(serial_number='S1101390')
+    # 90: 左  91： 右
+    ia = h.create_image_acquirer(serial_number='S1101391')
     #ia2 = h.create_image_acquirer(1)
     ia.start()
     ##ia2.start()
     c = Camera(ia=ia)
     #c2 = Camera(ia=ia2)
-    from Modules.Robot import Robot
-    from Modules.parse import CfgManager
-    cfgManager = CfgManager(path='../CONF.cfg')
-    cfg = cfgManager.cfg
-    robot = Robot(cfg=cfg)
-    robot.start()  # 不停发送系统状态
-    robot.set_light_on()
+    #from Modules.Robot import Robot
+    #from Modules.parse import CfgManager
+    #cfgManager = CfgManager(path='../CONF.cfg')
+    #cfg = cfgManager.cfg
+    #robot = Robot(cfg=cfg)
+    #robot.start()  # 不停发送系统状态
+    #robot.set_light_on()
 
     count = 0
     from time import sleep
@@ -67,21 +68,11 @@ if __name__ == '__main__':
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     while True:
         img = c.capture()
-        bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-        img = 255 - img
-        ret, corners = cv2.findChessboardCorners(img, (w, h), None)
-        if ret:
-            corners2 = cv2.cornerSubPix(img, corners, (51, 51), (-1, -1), criteria)
-            # Draw and display the corners
-            cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
-        bgr_img = cv2.resize(bgr_img, None, fx=0.5, fy=0.5)
-        cv2.imshow('src', bgr_img)
-        cv2.waitKey(1000)
-        #if img is not None:
-        ##img2 = c2.capture()
-        #    cv2.imshow('df', cv2.resize(img, None, fx=0.5, fy=0.5))
-        #    k = cv2.waitKey(33)
-        #    if k == 99: # 'c'
-        #        cv2.imwrite(f'C:/Users/001/Desktop/imgs/{count}.bmp', img)
-        #        count += 1
+        if img is not None:
+        #img2 = c2.capture()
+            cv2.imshow('df', cv2.resize(img, None, fx=0.5, fy=0.5))
+            k = cv2.waitKey(33)
+            if k == 99: # 'c'
+                cv2.imwrite(f'C:/Users/001/Desktop/imgs/{count}.bmp', img)
+                count += 1
 
