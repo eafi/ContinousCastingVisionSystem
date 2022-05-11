@@ -31,6 +31,7 @@ class Camera(QObject):
             #img = 255 - img.astype(np.uint8)
             #img = img.astype(np.uint8)
             buffer.queue()
+            print('sdfsdf')
         except Exception as e:
             LOG(log_types.WARN, self.tr('Camera Capturing is Failed.'+e.args[0]))
             return None
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     ia = h.create_image_acquirer(serial_number='S1101391')
     #ia2 = h.create_image_acquirer(1)
     ia.start()
-    ##ia2.start()
+    #ia2.start()
     c = Camera(ia=ia)
     #c2 = Camera(ia=ia2)
     #from Modules.Robot import Robot
@@ -68,9 +69,11 @@ if __name__ == '__main__':
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     while True:
         img = c.capture()
+        #img2 = c2.capture()
         if img is not None:
         #img2 = c2.capture()
             cv2.imshow('df', cv2.resize(img, None, fx=0.5, fy=0.5))
+            #cv2.imshow('df2', cv2.resize(img2, None, fx=0.5, fy=0.5))
             k = cv2.waitKey(33)
             if k == 99: # 'c'
                 cv2.imwrite(f'C:/Users/001/Desktop/imgs/{count}.bmp', img)

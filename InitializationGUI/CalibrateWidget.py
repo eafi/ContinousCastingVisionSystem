@@ -56,13 +56,12 @@ class Calibration(QThread):
         self.parent = parent
         self.robot = Robot(cfg)  # 与PLC通讯相关
         self.robot.start()
-        self.robot.set_light_on()
         self.robot.systemStateChange.connect(self.init_system_state_change)
         # 解析的机器人移动点为将会被保存到此处[p0, p1, ..., pn]
         # p0 = x, y, z, al, be, ga
         self.robotRealPos = [] # 真实末端位置（来自PLC）
         self.pos_cnt = 0 # 用于记录当前发送到哪一个点了
-        self.pos_cnt_limit = 20 # 极限运动次数
+        self.pos_cnt_limit = 10 # 极限运动次数
         self.calibrateState = -1  # init初始化态： 检查网络并且等待Robot空闲
         self.is_calibrating_flag = False # 正在进行单次标定，用于阻塞不断允许标定的PLC通讯
         self.is_auto_cali = False
