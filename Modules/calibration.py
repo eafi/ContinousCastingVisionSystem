@@ -143,9 +143,9 @@ def camera_calibration(images, grid=(11,8), width=30):
             imgpoints.append(corners2)
             # Draw and display the corners
             cv2.drawChessboardCorners(bgr_img, (h, w), corners2, ret)
-            cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
+            #cv2.imshow('bgr', cv2.resize(bgr_img,None,fx=0.5,fy=0.5))
             print(fname, 'OK')
-            cv2.waitKey(33)
+            #cv2.waitKey(33)
     ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, img.shape[::-1], None, None)
     print(rvecs, tvecs)
     print(mtx, dist)
@@ -172,8 +172,8 @@ def calibration():
     NOTE: 有两个相机，因此需要标定两次。
     :return:
     """
-    #ca_path = '../CalibrationImages' # 标定保存的图像和pos.txt文件夹
-    ca_path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/111'
+    ca_path = '../CalibrationImages' # 标定保存的图像和pos.txt文件夹
+    #ca_path = 'E:/home/eafi/projects/py-projects/pythonProject5/res/111'
     sort_f = lambda x: int(os.path.splitext(os.path.basename(x))[0].split('-')[1])
     pos_files = glob.glob(f'{ca_path}/pos-*.txt')
     pos_files.sort(key=sort_f)

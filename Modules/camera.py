@@ -48,7 +48,7 @@ if __name__ == '__main__':
         h.add_file('C:/Program Files/MATRIX VISION/mvIMPACT Acquire/bin/x64/mvGenTLProducer.cti')
     h.update()
     # 90: 左  91： 右
-    ia = h.create_image_acquirer(serial_number='S1101391')
+    ia = h.create_image_acquirer(serial_number='S1101390')
     #ia2 = h.create_image_acquirer(1)
     ia.start()
     #ia2.start()

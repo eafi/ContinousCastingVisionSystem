@@ -101,7 +101,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
         pass
 
     for pts in combinations(points, 4):
-        bgr_acc_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        #bgr_acc_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         #print('combination for 4: ',pts)
         # 以x进行排序
         pts = sorted(pts, key=lambda x:x[0])
@@ -137,19 +137,21 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
         #print('bot k: {}, bot_dist: {}'.format(bot_k, bot_dist))
         #print('left k: {}, left_dist: {}'.format(left_k, left_dist))
         #print('right k: {}, right_dist: {}'.format(right_k, right_dist))
-        #        if abs(top_k) < epsilon_k and abs(bot_k) < epsilon_k and  \
-        #            1.0 / abs(left_k) < epsilon_k and 1.0 / abs(right_k) < epsilon_k and \
-        #            abs(top_dist-bot_dist) < epsilon_dst and abs(left_dist-right_dist) <epsilon_dst and \
-        #            abs(top_dist-right_dist) < epsilon_dst and abs(right_dist-bot_dist) < epsilon_dst and\
-        #            abs(bot_dist-left_dist) < epsilon_dst :
         if abs(top_dist-bot_dist) < epsilon_dst and abs(left_dist-right_dist) <epsilon_dst and \
                 1-abs(cos_sim(lt_pts,rt_pts,lb_pts,rb_pts)) < epsilon_k and \
                 1-abs(cos_sim(lt_pts,lb_pts,rt_pts,rb_pts)) < epsilon_k and \
                 abs(cos_sim(lt_pts,rt_pts,rt_pts,rb_pts)) < epsilon_k and \
                 abs(cos_sim(rb_pts,lb_pts,lb_pts,lt_pts)) < epsilon_k and \
-                abs(top_dist-right_dist) < 0.15*top_dist and \
-                abs(right_dist-bot_dist) < 0.15*right_dist and \
+                abs(top_dist-right_dist) < 0.3*top_dist and \
+                abs(right_dist-bot_dist) < 0.3*right_dist and \
                 abs(top_k) < epsilon_k :
+
+        #if abs(top_dist - bot_dist) < epsilon_dst and abs(left_dist - right_dist) < epsilon_dst and \
+        #        1 - abs(cos_sim(lt_pts, rt_pts, lb_pts, rb_pts)) < epsilon_k and \
+        #        1 - abs(cos_sim(lt_pts, lb_pts, rt_pts, rb_pts)) < epsilon_k and \
+        #        abs(cos_sim(lt_pts, rt_pts, rt_pts, rb_pts)) < epsilon_k and \
+        #        abs(cos_sim(rb_pts, lb_pts, lb_pts, lt_pts)) < epsilon_k and \
+        #        abs(top_k) < epsilon_k:
             # 1. 上下、左右边长之差
             # 2. 上下、左右平行度
             # 3. 相邻边长度关系
@@ -165,7 +167,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.9,0.05],
-           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=15):
+           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=30):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
     得到精确的4个圆心坐标(search_4_points)

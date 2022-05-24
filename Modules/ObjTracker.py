@@ -114,6 +114,10 @@ class ObjTracker(QObject):
 
         return tar2base
 
+#def intersection(x,xc=-173.79198,yc=-5005.76502,rc=1758.65238):
+#def intersection(x, xc=-173.79198, yc=-5005.76502, rc=1766.246134):
+def intersection(x, xc=-173.79198, yc=-5005.76502, rc=1764.43751):
+    return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
 
 if __name__ == '__main__':
     from parse import CfgManager
@@ -122,13 +126,13 @@ if __name__ == '__main__':
     src_img = 'C:/Users/001/Desktop/imgs/0.bmp'
     src_img = cv2.imread(src_img, cv2.IMREAD_GRAYSCALE)
     ms = []
-    for dx, cam in zip([0, 1300], ['Left', 'Right']):
+    for dx, cam in zip([300, 1600], ['Left', 'Right']):
         dh = 700 # ROI的垂直偏移
         img = src_img[dh:dh+768, dx:dx+768]
         cv2.imshow('img', img)
         cv2.waitKey(0)
         from Detection_1.search import search
-        rect = search(img, roi_size=0, ring_threshold=[0.2, 1.0, 0.1])
+        rect = search(img, roi_size=0, ring_threshold=[0, 1.0, 0.1])
         roi_name = f'LeftCamera{cam}ROI'
         # 注意，单元测试时，需要把ROI返还回全局相机成像平面坐标系下
         bgr_img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
@@ -151,8 +155,19 @@ if __name__ == '__main__':
                 print(m[0])
                 #np.save('right_camera_left_roi.npy', m)
                 break
+    print(ms[0][0,3])
+    print(ms[0][1,3])
+    ms[0][0,3] -= 10.08
+    ms[0][1,3] = intersection(ms[0][0, 3])
+    #delta = np.array([3.26228868,-20.28696512,0.83168597])
+    #delta = np.array([3.26228868,-20.28696512,0.83168597])
+    #delta = np.array([-0.80293111,-12.46166009, -0.20752269])
+
     #print(np.linalg.norm(ms[0][:3, 3]-ms[1][:3, 3], ord=2))
-    print(np.linalg.norm(ms[0][:3, 3]-ms[1][:3, 3], ord=2))
+    #ms[1][:3, 3] += delta
+    #print(np.linalg.norm(ms[0][:3, 3]-ms[1][:3, 3], ord=2))
+    #delta = ms[0][:3, 3]-ms[1][:3, 3]
+    #print(delta)
 
     #from utils import trans2vecs
     #data = trans2vecs(ms[0])
@@ -180,19 +195,18 @@ if __name__ == '__main__':
     #print(trans2vecs(tar2board))
 
     #print(trans2vecs(m))
-    #from Modules.Robot import Robot
-    #from Modules.parse import CfgManager
-    #cfgManager = CfgManager(path='../CONF.cfg')
-    #cfg = cfgManager.cfg
+    from Modules.Robot import Robot
+    from Modules.parse import CfgManager
+    cfgManager = CfgManager(path='../CONF.cfg')
+    cfg = cfgManager.cfg
     ###degree = ms[0] @ tar2board # 角度
 
-    #pos = trans2vecs(ms[1])
-    #pos[2] += -376.1
-    #pos[3] += 180 - 45.0
-    #robot = Robot(cfg=cfg)
-    #robot.start()  # 不停发送系统状态
-    #while True:
-    #    print(pos)
-    #    robot.set_move_vec(pos)
-    #    robot.set_system_mode(2)
-    #    pass
+    pos = trans2vecs(ms[0])
+    pos[2] += -376.1
+    pos[3] += 180 - 45.0
+    robot = Robot(cfg=cfg)
+    robot.start()  # 不停发送系统状态
+    while True:
+        print(pos)
+        robot.set_move_vec(pos)
+        robot.set_system_mode(2)
