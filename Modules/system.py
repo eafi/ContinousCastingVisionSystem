@@ -49,6 +49,7 @@ class CoreSystem(QThread):
         self.detect_timers = QTimer()
         self.detect_timers.timeout.connect(self.detect_img_prompt)
         self.detect_timers.timeout.connect(self.detect_res_reader)
+        self.detect_timers.start(500)
 
 
     def run(self):
@@ -133,7 +134,6 @@ class CoreSystem(QThread):
         self.d = Detect(self.cache_path)
         self.p = Process(target=self.d.detect)
         self.p.start()
-        self.detect_timers.start(500)
 
     def core_resource_cfg(self):
         if not initClass.cfgInit:
@@ -215,25 +215,26 @@ class CoreSystem(QThread):
         对检测到的npy文件进行文件名(which camera which roi?)和检测内容解析，
         :return:
         """
-        files = glob.glob(self.cache_path + '/*.npy')
-        for file in files:
-            print(file)
-            split_name = os.path.splitext(os.path.basename(file))[0].split('-')
-            roi_name = split_name[0]
-            time_stamp = float(split_name[1])
-            rect = np.load(file)
-            os.remove(file)
+        cache_path = self.cfg['System_Conf']['CachePath']
+        #files = glob.glob(cache_path+'/*.npy')
+        #for file in files:
+        #    print(file)
+        #    split_name = os.path.splitext(os.path.basename(file))[0].split('-')
+        #    roi_name = split_name[0]
+        #    time_stamp = float(split_name[1])
+        #    rect = np.load(file)
+        #    os.remove(file)
 
-            # !!从局部ROI返回到全局ROI坐标
-            rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
-            # 将发现载入标定板绑定对象:
-            if roi_name not in self.roi_board_trackers.keys():  # 全新找到的对象
-                self.roi_board_trackers[roi_name] = BoardTracker(rect, roi_name)
-            else:
-                # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
-                self.roi_board_trackers[roi_name].step(rect)
+        #    # !!从局部ROI返回到全局ROI坐标
+        #    rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
+        #    # 将发现载入标定板绑定对象:
+        #    if roi_name not in self.roi_board_trackers.keys():  # 全新找到的对象
+        #        self.roi_board_trackers[roi_name] = BoardTracker(rect, roi_name)
+        #    else:
+        #        # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
+        #        self.roi_board_trackers[roi_name].step(rect)
 
-            self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
+        #    self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
 
     def detect_img_prompt(self):
         """
@@ -242,9 +243,12 @@ class CoreSystem(QThread):
         此外，应该先检查相机系统状态后，才能调用检测 -> state == 'OK'
         :return:
         """
-        if self.detect_enable and self.current_target:
+        cache_path = self.cfg['System_Conf']['CachePath']
+        if self.detect_enable:
             img = self.cam.im_np
+            #TODO:
             for roi_name in self.current_target.roi_names:
-                roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
-                roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-                cv2.imwrite(f'../.cache/{roi_name}-{time.time()}.bmp', roi_img)
+                #roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
+                print(cache_path)
+                #roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+                #cv2.imwrite(f'{cache_path}/{roi_name}-{time.time()}.bmp', roi_img)
