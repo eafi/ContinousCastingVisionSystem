@@ -43,7 +43,7 @@ class Detect:
                 # if rect.size != 0:
                 #    rect = search(src_img=self.img, **self.kargs)
                 start_time = time.time()
-                rect = search(src_img=img)
+                rect = search(src_img=img, roi_size=0, ring_threshold=[0.2, 0.9, 0.1])
                 print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! time: {time.time() - start_time}')
                 os.remove(file)
                 if rect.size != 0:

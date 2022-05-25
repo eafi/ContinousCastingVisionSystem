@@ -31,7 +31,6 @@ class Camera(QObject):
             #img = 255 - img.astype(np.uint8)
             #img = img.astype(np.uint8)
             buffer.queue()
-            print('sdfsdf')
         except Exception as e:
             LOG(log_types.WARN, self.tr('Camera Capturing is Failed.'+e.args[0]))
             return None

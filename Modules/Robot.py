@@ -2,7 +2,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 import numpy as np
 from Modules.network import Network
 from time import sleep
-from Modules.utils import trans2vecs
+from Modules.utils import trans2xyzrpy
 class Robot(QThread):
     systemStateChange = pyqtSignal(int, list) #在system.py 和 calibratewidget.py绑定
     #robotStateChange = pyqtSignal(list) # 标定时需要获得机械臂末端位置
@@ -77,9 +77,9 @@ class Robot(QThread):
 
 
     def set_move_mat(self, transMat):
-        self.sendData = trans2vecs(transMat)
+        self.sendData = trans2xyzrpy(transMat)
 
-    def set_move_vec(self, vec):
+    def set_move_xyzrpy(self, vec):
         self.sendData = vec
 
     def set_calibrate_req(self, state):

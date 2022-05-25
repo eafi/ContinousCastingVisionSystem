@@ -17,10 +17,10 @@ class MainGUI(QObject):
 
     def initUI(self):
         self.cfg = self.core.cfgManager.cfg
-        self.leftCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('LeftCamera'), harvesters=self.core.camera_1)
-        self.rightCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('RightCamera'), harvesters=self.core.camera_2)
-        self.core.camera_1 = self.leftCameraWidget
-        self.core.camera_2 = self.rightCameraWidget
+        self.leftCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('LeftCamera'), harvesters=self.core.left_cam)
+        self.rightCameraWidget = CoreSystemCameraWidget(cfg=self.cfg, cameraType=self.tr('RightCamera'), harvesters=self.core.right_cam)
+        self.core.left_cam = self.leftCameraWidget
+        self.core.right_cam = self.rightCameraWidget
         # ControlPanle实例化
         self.controlPanle = ControlPanleWidget(cfg=self.cfg)
 

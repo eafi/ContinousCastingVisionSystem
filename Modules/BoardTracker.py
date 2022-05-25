@@ -18,11 +18,10 @@ from PyQt5.QtCore import QObject
 import numpy as np
 from collections import deque
 from Modules.Detection_1.utils.PnP import *
-from Modules.utils import vecs2trans
 from Modules.utils import *
 
 
-class ObjTracker(QObject):
+class BoardTracker(QObject):
     def __init__(self, cfg, rect, roi_name):
         """
         :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
@@ -32,14 +31,12 @@ class ObjTracker(QObject):
         self.rects.append(rect)
         self.isStable = False
         self.roi_name = roi_name
-        self.cfg = cfg
 
         #读取必要转换文件: 相机内参数、畸变参数和手眼标定结果
         lr_name = roi_name.split('Camera')[0]
         self.mtx = self.cfg['Calibration_Conf'][f'{lr_name}CameraMatrix']
         self.dist = self.cfg['Calibration_Conf'][f'{lr_name}CameraDist']
         self.camera2base = self.cfg['Calibration_Conf'][f'{lr_name}HandEyeMatrix']
-
 
 
     def step(self, rect):
@@ -59,65 +56,12 @@ class ObjTracker(QObject):
             self.isStable = False
 
 
-    def fetch_posture(self):
+    def fetch_stable_rect(self):
         if self.isStable:
-            m = self._target_estimation(self.roi_name, np.mean(self.rects, axis=0))
-            #m = np.random.rand(4,2)
-            return m
+            return np.mean(self.rects, axis=0)
         # 标定板正在运动，不能返回
         return None
 
-
-
-    def _target_estimation(self, whichCamerawhichROI: str, rect: np.ndarray):
-        """
-        目标估计: 根据标定板的物理尺度进行PnP计算, 然后根据CFG刚体矩阵转换到目标抓取位置，最后根据手眼标定矩阵转换到机器人坐标系
-        :param whichCamerawichROI:
-        :param rect:
-        :return:
-        如果该ROI是左右两个标定板区域，那么需要计算两个Target: 水口安装位置 + 滑动液压钢位置 , 返回list
-        如果该ROI是其他区域，那么只返回一个矩阵即可
-        """
-        # 哪一个ROI区域，用于决定哪一个刚体目标
-        whichTarget = whichCamerawhichROI.split('Camera')[1].replace('ROI', 'Ref')
-
-        # 获得目标板到刚体目标的转换矩阵(在parse。py中已经转化成矩阵)
-        if whichTarget == 'LeftRef' or whichTarget == 'RightRef':
-            # 左右参考标定板代表了两个坐标：水口安装位置 + 滑板液压缸安装位置，因此需要保存两个矩阵
-            tar2board = []
-            tar2board.append(self.cfg['Tar2Board_Conf'][whichTarget + '1'])
-            tar2board.append(self.cfg['Tar2Board_Conf'][whichTarget + '2'])
-        else:
-            tar2board = self.cfg['Tar2Board_Conf'][whichTarget]
-        # 目标板已知绝对物理尺寸(在目标板左上角圆心为原点的坐标系下)
-
-        # 判别标定板是横向还是竖向： 注意rect返回的 0-x, 1-y
-        dw = rect[1][0] - rect[0][0]  # 宽度
-        dh = rect[-1][1] - rect[0][1]  # 高度
-        print(rect)
-        # 确定是横向还是纵向标定板
-        rectPtsRef = get_four_points(vertical=True) if dh > dw else get_four_points(vertical=False)
-
-        # ==================== PNP 得到目标板在相机坐标系下 ======================
-        ret, rvec, tvec = cv2.solvePnP(rectPtsRef, rect, self.mtx, self.dist, cv2.SOLVEPNP_IPPE)
-
-        board2camera = vecs2trans(rvec=rvec, tvec=tvec)
-
-
-        if isinstance(tar2board, list):
-            tar2base = []
-            tar2base.append(self.camera2base @ board2camera @ tar2board[0] )
-            tar2base.append(self.camera2base @ board2camera @ tar2board[1] )
-
-        else:
-            tar2base = self.camera2base @ board2camera @ tar2board
-
-        return tar2base
-
-#def intersection(x,xc=-173.79198,yc=-5005.76502,rc=1758.65238):
-#def intersection(x, xc=-173.79198, yc=-5005.76502, rc=1766.246134):
-def intersection(x, xc=-173.79198, yc=-5005.76502, rc=1764.43751):
-    return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
 
 if __name__ == '__main__':
     from parse import CfgManager
