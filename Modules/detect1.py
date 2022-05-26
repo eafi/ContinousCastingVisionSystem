@@ -43,10 +43,11 @@ class Detect:
                 # if rect.size != 0:
                 #    rect = search(src_img=self.img, **self.kargs)
                 start_time = time.time()
-                rect = search(src_img=img, roi_size=0, ring_threshold=[0.2, 0.9, 0.1])
-                print(f'!!!!!!!!!!!!!!!!!!!!!!!!!!!!! time: {time.time() - start_time}')
+                rect = search(src_img=img, roi_size=0)
+                print(f'detect1 time cost: {time.time() - start_time}')
                 os.remove(file)
-                if rect.size != 0:
+                if rect.any():
+                    print('detect1 find')
                     split_name = os.path.splitext(os.path.basename(file))[0]
                     save_path = os.path.join(self.cache_path, split_name)+'.npy'
                     np.save(save_path, rect)

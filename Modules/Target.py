@@ -45,7 +45,7 @@ class Target:
         board2camera = cv2trans(rvec=rvec, tvec=tvec)
         return board2camera
 
-    def target_estimation(self,mtx: np.ndarray, dist: np.ndarray, cam2base: np.ndarray, rect: np.ndarray):
+    def target_estimation(self,mtx: np.ndarray, dist: np.ndarray, cam2base: np.ndarray, rects: np.ndarray, state: str):
         """
         :param mtx:
         :param dist:

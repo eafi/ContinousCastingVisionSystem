@@ -32,6 +32,8 @@ class MainGUI(QObject):
         self.rightCameraWidget.cameraStatusSignal.connect(self.controlPanle.statusWidget.rightCameraStatusLabel.clrChange)
         self.leftCameraWidget.cameraStatusSignal.connect(self.core.robot.set_left_camera)
         self.rightCameraWidget.cameraStatusSignal.connect(self.core.robot.set_right_camera)
+        self.leftCameraWidget.cameraStatusSignal.emit('OK')
+        self.rightCameraWidget.cameraStatusSignal.emit('OK')
         self.controlPanle.statusWidget.cudaStatusLabel.clrChange('OK' if self.core.cuda_available else 'Break')
         self.core.robot.network.robotCommunicationStatusSignal.connect(self.controlPanle.statusWidget.robotStatusLabel.clrChange)
 

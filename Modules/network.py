@@ -162,7 +162,7 @@ class Network(QThread):
         try:
             if self.connectSocket is not None: # 存在PLC链接
                 msg_to_send = self.msgManager.pack(ctl, data, res)
-                print(msg_to_send)
+                #print('Send:',ctl,data,res)
                 self.outputs.append(self.connectSocket)
                 self.message_queues[self.connectSocket].put(msg_to_send)
             else:

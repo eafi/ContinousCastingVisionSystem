@@ -138,6 +138,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
         #print('left k: {}, left_dist: {}'.format(left_k, left_dist))
         #print('right k: {}, right_dist: {}'.format(right_k, right_dist))
         if abs(top_dist-bot_dist) < epsilon_dst and abs(left_dist-right_dist) <epsilon_dst and \
+                top_dist > 80 and bot_dist > 80 and left_dist > 80 and right_dist > 80 and \
                 1-abs(cos_sim(lt_pts,rt_pts,lb_pts,rb_pts)) < epsilon_k and \
                 1-abs(cos_sim(lt_pts,lb_pts,rt_pts,rb_pts)) < epsilon_k and \
                 abs(cos_sim(lt_pts,rt_pts,rt_pts,rb_pts)) < epsilon_k and \
@@ -167,7 +168,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.9,0.05],
-           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.5, epsilon_dst=30):
+           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.3, epsilon_dst=30):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
     得到精确的4个圆心坐标(search_4_points)
@@ -343,25 +344,21 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99
 if __name__ == '__main__':
     print('hello')
     #img_path = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
-    src_img = 'C:/Users/001/Desktop/imgs/0.bmp'
+    src_img = 'C:/Users/001/Desktop/imgs/-1.bmp'
     img_files = [src_img]
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
 
         cv2.imshow('img', img)
-        roi = img[600:600+768, 0:768]
-        bgr_src = cv2.cvtColor(roi, cv2.COLOR_GRAY2BGR)
-        roi = roi.astype(np.float32) / 255.0
-        val = 2.0
-        rect = search(src_img=roi, roi_size=0)
+        bgr_src = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+        rect = search(src_img=img, roi_size=0)
         print(rect)
-        #if rect.any():
-        #    cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
-        #    cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
-        #    cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
-        #    cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
-        #    cv2.imshow('found', bgr_src)
-        #    cv2.waitKey(0)
-        #imgs = np.stack((roi, roi2), axis=0)
+        if rect.any():
+            cv2.line(bgr_src, rect[0].astype(np.int32), rect[1].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[1].astype(np.int32), rect[2].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[2].astype(np.int32), rect[3].astype(np.int32), (0, 255, 255), 1)
+            cv2.line(bgr_src, rect[3].astype(np.int32), rect[0].astype(np.int32), (0, 255, 255), 1)
+            cv2.imshow('found', bgr_src)
+            cv2.waitKey(0)
         #search_batch(src_imgs=imgs, roi_size=0)
 

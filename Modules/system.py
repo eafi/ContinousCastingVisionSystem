@@ -22,6 +22,7 @@ from time import sleep
 from harvesters.core import Harvester
 from platform import system
 from Modules.detect1 import Detect
+from CoreSystemGUI.CameraPanle.CoreSystemCameraWidget import CoreSystemCameraWidget
 import cv2
 
 
@@ -41,15 +42,11 @@ class CoreSystem(QThread):
         # CFG被其他控件更新后，需要发送相应信号，致使整个系统刷新Cfg
         # 如何发起cfg刷新？ 在Signal Map中查找并发送cfgUpdateSignal信号. 在LogWidget配置中有使用.
         self.core_sys_state = -1  # 系统宏观状态，初始时-1，将初始化分配必要资源
-        self.current_target = None
-        self.roi_board_trackers = {}  # 以ROI name的字典，保存各个ROI的BoardTracker,返回稳定的board
-        self.tmpThread = None
+        self.current_target = None  # 当前系统观察目标
+        self.roi_board_trackers = {}  # 以ROI name的字典，保存各个ROI的BoardTracker,用于追踪各个ROI
+        self.stable_rects = {}  # 以ROI name为字典， 保存从boardtracker获得的稳定的rect
         self.detect_enable = False
-
-        self.detect_timers = QTimer()
-        self.detect_timers.timeout.connect(self.detect_img_prompt)
-        self.detect_timers.timeout.connect(self.detect_res_reader)
-        self.detect_timers.start(500)
+        self.left_cam = None
 
 
     def run(self):
@@ -64,56 +61,82 @@ class CoreSystem(QThread):
                     # 关键资源分配，失败时将不断重新尝试初始化 #
                     # =================================#
                     self.core_resources_check()  # 资源分配
-                    self.core_sys_state = 0  # 成功，进入静默状态
+                    self.core_sys_state = 1  # 成功，进入静默状态
                     self.resourceInitOKSignal.emit()
                     LOG(log_types.OK, self.tr('System init good.'))
                 except Exception as e:
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
-            elif self.core_sys_state == 0:  # 初始化成功状态，等待TCP请求
-                self.core_sys_state = 2
+            elif self.core_sys_state == 1:  # 初始化成功状态，等待TCP请求
+                self.roi_board_trackers = {}  # 清空ROIname - board tracker 字典
+                self.stable_rects = {} # 清空 ROIName - stable_rect 字典
+                self.current_target = None
+                # PLC要求：已经完成动作，清空该系统状态，清空发送的坐标
+                self.robot.reset_system_mod()
+                self.robot.reset_move()
+                continue
+                #self.core_sys_state = 2
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
             #####################################################################################################
             #################################### PLC 请求相应函数 #################################################
             #####################################################################################################
-            elif self.core_sys_state == 1:  # PLC命令启动检测,能源介质接头坐标
+            elif self.core_sys_state == 2:  # PLC命令启动检测,安装能源
+                self.detect_enable = True
+            elif self.core_sys_state == 3:  # PLC命令启动检测，卸载能源
+                self.detect_enable = True
+            elif self.core_sys_state == 4:  # 安装液压缸
+                self.detect_enable = True
+            elif self.core_sys_state == 5:  # 卸载液压缸
+                self.detect_enable = True
+            elif self.core_sys_state == 6:  # 安装水口
                 self.detect_enable = True
                 self.current_target = self.target_nozzle
-            elif self.core_sys_state == 2:  # PLC命令启动检测，安装水口安装坐标
+                self.request_wait(self.current_target, 'Install')
+            elif self.core_sys_state == 7:  # 卸载水口
                 self.detect_enable = True
                 self.current_target = self.target_nozzle
-            elif self.core_sys_state == 3:  # 请求安装滑板液压缸坐标
-                self.detect_enable = True
-                self.current_target = self.target_nozzle
-            if self.current_target is not None:
-                self.request_wait()
+                self.request_wait(self.current_target, 'Remove')
+            print('core sys: in ', self.core_sys_state)
+            sleep(2)
+            self.detect_img_prompt()
+            self.detect_res_reader()
 
-    def request_wait(self):
+    def request_wait(self, target, state):
         """
         当PLC需求指定状态时，（使用roi_names指定检测哪一个（并非此函数功能）），
         本函数轮询检查TargetObj[roi_name]的计算情况，一旦计算完毕就会返回计算坐标,
         并向PLC发送指令
         :param target: 安装或卸载的目标，为Target.py的子类，定义了具体的Pnp计算
-        :param roi_names:
-        :param set_sys_mod:
-        :param state: 安装或者卸载
+        :param state: 安装或者卸载 Install or Remove
         :return:
         """
-        if self.current_target is None:
+        if target is None:
             return
-        roi_names = self.current_target.roi_names
+        roi_names = target.roi_names
         if not isinstance(roi_names, list):
             roi_names = [roi_names]
         for roi_name in roi_names:
-            if roi_name in self.roi_board_trackers:
-                stable_rect = self.roi_board_trackers[roi_name].fetch_stable_rect() # 稳定后返回rect
-                xyzrpy = self.current_target.target_estimation(mtx=self.cam_mtx,
-                                         dist=self.cam_dist,
-                                         cam2base=self.hand_eye,
-                                         rect=stable_rect)
-                if xyzrpy is not None:
-                    self.robot.set_move_xyzrpy(xyzrpy)
-                    self.robot.set_system_mode(self.core_sys_state)
-                    self.core_sys_state = 0 # 系统回到静默状态
+            cam_roi_name = 'LeftCamera'+roi_name
+            if cam_roi_name in self.roi_board_trackers.keys():
+                stable_rect = self.roi_board_trackers[cam_roi_name].fetch_stable_rect() # 稳定后返回rect
+                if stable_rect is not None:
+                    self.stable_rects[roi_name] = stable_rect
+            #print('stable_rect', stable_rect)
+        xyzrpy = target.target_estimation(mtx=self.cam_mtx,dist=self.cam_dist,
+                                                       cam2base=self.hand_eye,
+                                                       rects=self.stable_rects,
+                                                       state=state)
+        if xyzrpy is not None:
+            LOG(log_types.OK, 'xyzrpy is sent:')
+            print(xyzrpy)
+            self.robot.set_move_xyzrpy(xyzrpy)
+            self.robot.set_system_mode(self.core_sys_state)
+            self.detect_enable = False # 当检测成功并发送后，关闭detect，该命令会静止图像采样
+            # 清空已有内容
+            #for file_path, _, file_name in os.walk(self.cfg['System_Conf']['CachePath']):
+            #    for name in file_name:
+            #        os.remove(os.path.join(file_path, name))
+            #TODO: 是PLC控制系统静默，还是core sys自动进入静默？ 现在的设计是PLC控制
+            #self.core_sys_state = 1 # 系统回到静默状态
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
@@ -135,9 +158,10 @@ class CoreSystem(QThread):
         self.p = Process(target=self.d.detect)
         self.p.start()
 
+
     def core_resource_cfg(self):
         if not initClass.cfgInit:
-            self.cfgManager = CfgManager(path='CONF.cfg')
+            self.cfgManager = CfgManager(path='../CONF.cfg')
             self.cfg = self.cfgManager.cfg
 
             # 检测的缓冲图像文件夹
@@ -156,10 +180,10 @@ class CoreSystem(QThread):
             print(self.h.device_info_list)
             # DEBUG
 
-            #self.camera_1 = self.h.create_image_acquirer(serial_number='S1101390')
-            #self.camera_2 = self.h.create_image_acquirer(serial_number='S1101391')
-            self.left_cam = self.h.create_image_acquirer(0)
-            self.right_cam = self.h.create_image_acquirer(1)
+            self.left_cam = self.h.create_image_acquirer(serial_number='S1101390')
+            self.right_cam = self.h.create_image_acquirer(serial_number='S1101391')
+            #self.left_cam = self.h.create_image_acquirer(0)
+            #self.right_cam = self.h.create_image_acquirer(1)
             self.left_cam.start()
             self.right_cam.start()
 
@@ -206,9 +230,11 @@ class CoreSystem(QThread):
         :param datalst:
         :return:
         """
-        #if self.core_sys_state != state:
-        #    self.core_sys_state = state
-        self.core_sys_state = 2
+        if 1 <= state <= 7:
+            if self.core_sys_state != state:
+                self.core_sys_state = state
+            #self.core_sys_state = 2
+            print(state)
 
     def detect_res_reader(self):
         """
@@ -216,25 +242,24 @@ class CoreSystem(QThread):
         :return:
         """
         cache_path = self.cfg['System_Conf']['CachePath']
-        #files = glob.glob(cache_path+'/*.npy')
-        #for file in files:
-        #    print(file)
-        #    split_name = os.path.splitext(os.path.basename(file))[0].split('-')
-        #    roi_name = split_name[0]
-        #    time_stamp = float(split_name[1])
-        #    rect = np.load(file)
-        #    os.remove(file)
+        files = glob.glob(cache_path+'/*.npy')
+        for file in files:
+            split_name = os.path.splitext(os.path.basename(file))[0].split('-')
+            print(split_name)
+            roi_name = split_name[0]
+            rect = np.load(file)
+            os.remove(file)
 
         #    # !!从局部ROI返回到全局ROI坐标
-        #    rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
-        #    # 将发现载入标定板绑定对象:
-        #    if roi_name not in self.roi_board_trackers.keys():  # 全新找到的对象
-        #        self.roi_board_trackers[roi_name] = BoardTracker(rect, roi_name)
-        #    else:
-        #        # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
-        #        self.roi_board_trackers[roi_name].step(rect)
+            rect = rect + np.array(self.cfg['ROIs_Conf'][roi_name][:2], dtype=np.float32)
+            ## 将发现载入标定板绑定对象:
+            if roi_name not in self.roi_board_trackers.keys():  # 全新找到的对象
+                self.roi_board_trackers[roi_name] = BoardTracker(rect, roi_name)
+            else:
+            #    # 之前已经该rect对象已经发现过，那么将新检测到的Rect坐标刷新进去
+                self.roi_board_trackers[roi_name].step(rect)
 
-        #    self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
+            self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
 
     def detect_img_prompt(self):
         """
@@ -243,12 +268,11 @@ class CoreSystem(QThread):
         此外，应该先检查相机系统状态后，才能调用检测 -> state == 'OK'
         :return:
         """
-        cache_path = self.cfg['System_Conf']['CachePath']
         if self.detect_enable:
-            img = self.cam.im_np
-            #TODO:
-            for roi_name in self.current_target.roi_names:
-                #roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
-                print(cache_path)
-                #roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-                #cv2.imwrite(f'{cache_path}/{roi_name}-{time.time()}.bmp', roi_img)
+            cache_path = self.cfg['System_Conf']['CachePath']
+            if isinstance(self.left_cam, CoreSystemCameraWidget):
+                img = self.left_cam.im_np
+                for roi_name in self.current_target.roi_names:
+                    roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
+                    roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
+                    cv2.imwrite(f'{cache_path}/LeftCamera{roi_name}-{time.time()}.bmp', roi_img)

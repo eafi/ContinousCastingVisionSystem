@@ -22,21 +22,15 @@ from Modules.utils import *
 
 
 class BoardTracker(QObject):
-    def __init__(self, cfg, rect, roi_name):
+    def __init__(self, rect, roi_name):
         """
         :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
         :param roi_name: e.g. LeftCameraLeftROI,将会根据左右相机读取指定相机参数、手眼参数
         """
-        self.rects = deque(maxlen=10)
+        self.rects = deque(maxlen=2)
         self.rects.append(rect)
         self.isStable = False
         self.roi_name = roi_name
-
-        #读取必要转换文件: 相机内参数、畸变参数和手眼标定结果
-        lr_name = roi_name.split('Camera')[0]
-        self.mtx = self.cfg['Calibration_Conf'][f'{lr_name}CameraMatrix']
-        self.dist = self.cfg['Calibration_Conf'][f'{lr_name}CameraDist']
-        self.camera2base = self.cfg['Calibration_Conf'][f'{lr_name}HandEyeMatrix']
 
 
     def step(self, rect):
@@ -58,9 +52,11 @@ class BoardTracker(QObject):
 
     def fetch_stable_rect(self):
         if self.isStable:
+            print('fetch ok.')
             return np.mean(self.rects, axis=0)
         # 标定板正在运动，不能返回
-        return None
+        else:
+            return None
 
 
 if __name__ == '__main__':

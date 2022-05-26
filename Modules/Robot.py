@@ -72,8 +72,12 @@ class Robot(QThread):
         :param state:
         :return:
         """
-        if 1 <= state <= 5:
+        if 1 <= state <= 7:
             self.sendCtlBit |= self.cfg['Network_Conf'][f'NetworkState{state}']
+
+    def reset_system_mod(self):
+        for i in range(1,8):
+            self.sendCtlBit &= ~self.cfg['Network_Conf'][f'NetworkState{i}']
 
 
     def set_move_mat(self, transMat):
@@ -81,6 +85,9 @@ class Robot(QThread):
 
     def set_move_xyzrpy(self, vec):
         self.sendData = vec
+
+    def reset_move(self):
+        self.sendData = 6 * [np.float32(0.0)]
 
     def set_calibrate_req(self, state):
         """
@@ -94,6 +101,7 @@ class Robot(QThread):
 
     def reset_calibrate_req(self):
         self.sendResBit[2] = 0x00
+
 
     def set_light_on(self):
         self.sendCtlBit &= ~self.cfg['Network_Conf']['NetworkLightOff']
@@ -129,7 +137,6 @@ class Robot(QThread):
         # 重复指令检查
         #print('dfsf', ctl)
 
-        print(ctl)
         #if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
         #    return
         self.recCtlBit = ctl
@@ -137,7 +144,7 @@ class Robot(QThread):
         self.recResBit = res
         # =================== 核心计算状态切换和请求指令 ==================== #
         # PLC命令： 系统状态检查
-        for state in range(1, 6):
+        for state in range(1, 8):
             if ctl & self.cfg['Network_Conf'][f'NetworkState{state}']:
                 self.systemStateChange.emit(state, [])
 
