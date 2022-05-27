@@ -56,7 +56,7 @@ class CoreSystem(QThread):
         CoreSystem主执行循环，用于与Robot交互，并根据Robot请求进行状态转移.
         :return:
         """
-        state = None
+        state = None  # 安装工况or卸载工况
         while True:
             if self.core_sys_state == -1:
                 try:
