@@ -39,6 +39,7 @@ class CfgManager(QObject):
         parse_roi_rect(self)  # 读取ROI rect信息
         parse_network(self)
         parse_robot_camera_matrix(self) # 解析标定结果矩阵
+        parse_target_circle(self) # 解析每个目标的拟合圆
 
 
 def parse_cfg(path: str):
@@ -99,6 +100,11 @@ def parse_robot_camera_matrix(obj):
         assert os.path.exists(val)
         obj.cfg['Calibration_Conf'][key] = np.load(val)
 
+def parse_target_circle(obj):
+    assert 'TargetCircle_Conf' in obj.cfg, LOG(log_types.FAIL, obj.tr('Cannot find Target Cicle Configuration.'))
+    for key in obj.cfg['TargetCircle_Conf']:
+        val = [float(x) for x in obj.cfg['TargetCircle_Conf'][key].split(',')]
+        obj.cfg['TargetCircle_Conf'][key] = val
 
 
 
@@ -137,7 +143,7 @@ def parse_network(obj):
 def write_couple_cfg(couple: tuple, path='CONF.cfg'):
     """
     向path文件写入一对新的cfg键值对
-    :param couple: 必须是一对, 且必须是str
+    :param couple: 必须是一对, 且必须是str (Key_Name_str, Value_str)
     :param path:
     :return:
     """

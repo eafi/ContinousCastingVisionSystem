@@ -18,6 +18,8 @@ from multiprocessing import Process
 from Modules.BoardTracker import BoardTracker
 from Modules.Robot import Robot
 from Modules.Targets.Target_nozzle import Target_nozzle
+from Modules.Targets.Target_slider import Target_slider
+from Modules.Targets.Target_powerend import Target_powerend
 from time import sleep
 from harvesters.core import Harvester
 from platform import system
@@ -54,6 +56,7 @@ class CoreSystem(QThread):
         CoreSystem主执行循环，用于与Robot交互，并根据Robot请求进行状态转移.
         :return:
         """
+        state = None
         while True:
             if self.core_sys_state == -1:
                 try:
@@ -73,6 +76,7 @@ class CoreSystem(QThread):
                 # PLC要求：已经完成动作，清空该系统状态，清空发送的坐标
                 self.robot.reset_system_mod()
                 self.robot.reset_move()
+                state = None
                 continue
                 #self.core_sys_state = 2
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
@@ -81,22 +85,31 @@ class CoreSystem(QThread):
             #####################################################################################################
             elif self.core_sys_state == 2:  # PLC命令启动检测,安装能源
                 self.detect_enable = True
+                self.current_target = self.target_powerend
+                state = 'Install'
             elif self.core_sys_state == 3:  # PLC命令启动检测，卸载能源
                 self.detect_enable = True
+                self.current_target = self.target_powerend
+                state = 'Remove'
             elif self.core_sys_state == 4:  # 安装液压缸
                 self.detect_enable = True
+                self.current_target = self.target_slider
+                state = 'Install'
             elif self.core_sys_state == 5:  # 卸载液压缸
                 self.detect_enable = True
+                self.current_target = self.target_slider
+                state = 'Remove'
             elif self.core_sys_state == 6:  # 安装水口
                 self.detect_enable = True
                 self.current_target = self.target_nozzle
-                self.request_wait(self.current_target, 'Install')
+                state = 'Install'
             elif self.core_sys_state == 7:  # 卸载水口
                 self.detect_enable = True
                 self.current_target = self.target_nozzle
-                self.request_wait(self.current_target, 'Remove')
+                state = 'Remove'
             print('core sys: in ', self.core_sys_state)
             sleep(2)
+            self.request_wait(self.current_target, state)
             self.detect_img_prompt()
             self.detect_res_reader()
 
@@ -109,7 +122,7 @@ class CoreSystem(QThread):
         :param state: 安装或者卸载 Install or Remove
         :return:
         """
-        if target is None:
+        if target is None or state is None:
             return
         roi_names = target.roi_names
         if not isinstance(roi_names, list):
@@ -131,12 +144,6 @@ class CoreSystem(QThread):
             self.robot.set_move_xyzrpy(xyzrpy)
             self.robot.set_system_mode(self.core_sys_state)
             self.detect_enable = False # 当检测成功并发送后，关闭detect，该命令会静止图像采样
-            # 清空已有内容
-            #for file_path, _, file_name in os.walk(self.cfg['System_Conf']['CachePath']):
-            #    for name in file_name:
-            #        os.remove(os.path.join(file_path, name))
-            #TODO: 是PLC控制系统静默，还是core sys自动进入静默？ 现在的设计是PLC控制
-            #self.core_sys_state = 1 # 系统回到静默状态
 
     def core_resources_check(self):
         """各种组建资源初始化，当任何一个组件初始化失败，都将重新初始化
@@ -217,10 +224,13 @@ class CoreSystem(QThread):
 
     def core_resource_targets(self):
         """
-        载入目标物体的相关信息
+        载入目标物体的相关信息.
+        注意，所有的新的目标物体，必须要在此注册
         :return:
         """
         self.target_nozzle = Target_nozzle(cfg=self.cfg)
+        self.target_slider = Target_slider(cfg=self.cfg)
+        self.target_powerend = Target_powerend(cfg=self.cfg)
 
 
     def core_sys_state_change(self, state, datalst):
@@ -241,8 +251,7 @@ class CoreSystem(QThread):
         对检测到的npy文件进行文件名(which camera which roi?)和检测内容解析，
         :return:
         """
-        cache_path = self.cfg['System_Conf']['CachePath']
-        files = glob.glob(cache_path+'/*.npy')
+        files = glob.glob(self.cache_path+'/*.npy')
         for file in files:
             split_name = os.path.splitext(os.path.basename(file))[0].split('-')
             print(split_name)
@@ -269,10 +278,9 @@ class CoreSystem(QThread):
         :return:
         """
         if self.detect_enable:
-            cache_path = self.cfg['System_Conf']['CachePath']
             if isinstance(self.left_cam, CoreSystemCameraWidget):
                 img = self.left_cam.im_np
                 for roi_name in self.current_target.roi_names:
                     roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
                     roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
-                    cv2.imwrite(f'{cache_path}/LeftCamera{roi_name}-{time.time()}.bmp', roi_img)
+                    cv2.imwrite(f'{self.cache_path}/LeftCamera{roi_name}-{time.time()}.bmp', roi_img)

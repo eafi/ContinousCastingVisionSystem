@@ -6,6 +6,9 @@ from Modules.utils import *
 class Target:
     """
     各个目标物体的名字，保存其状态：安装？拆卸？姿态转换表等
+    所有新的目标应该继承自本类，并且必须实现estimation方法，
+    在coreSystem中，需要注册新目标，并叫目标加入指定的网络通讯State中。
+    网络state的具体含义已经被预定义，并在CONF.cfg文件
     """
     def __init__(self, cfg, tar_name, roi_names):
         """
@@ -34,7 +37,7 @@ class Target:
     def is_removed(self):
         return ~self.is_installed_flag
 
-    def pnp(self,mtx, dist, rect: np.ndarray):
+    def transform_board_2_camera(self, mtx, dist, rect: np.ndarray):
         dw = rect[1][0] - rect[0][0]  # 宽度
         dh = rect[-1][1] - rect[0][1]  # 高度
         # 确定是横向还是纵向标定板
@@ -44,6 +47,10 @@ class Target:
         ret, rvec, tvec = cv2.solvePnP(rectPtsRef, rect, mtx, dist, cv2.SOLVEPNP_IPPE)
         board2camera = cv2trans(rvec=rvec, tvec=tvec)
         return board2camera
+
+    def transform_target_2_base(self, cam2base, board2cam, tar2board):
+        tar2base = cam2base @ board2cam @ tar2board
+        return tar2base
 
     def target_estimation(self,mtx: np.ndarray, dist: np.ndarray, cam2base: np.ndarray, rects: np.ndarray, state: str):
         """

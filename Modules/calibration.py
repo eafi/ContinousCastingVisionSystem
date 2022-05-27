@@ -163,7 +163,6 @@ def camera_calibration(images, grid=(11,8), width=30):
 
 import glob
 import os
-from Modules.utils import vecs2trans
 def calibration():
     """
     1. 打开所有图像文件

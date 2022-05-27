@@ -1,16 +1,16 @@
 from Modules.Target import Target
 import numpy as np
 from Modules.utils import *
-class Target_nozzle(Target):
-    """
-    长水口安装与卸载的目标文件
-    1. 长水口默认使用左ROI(提供X、和eular_X)进行安装，
-    2. 长水口默认使用左ROI(提供X)和下ROI(eular_X)进行卸载.
-    3. 长水口最终计算的Y轴使用拟合圆进行修正，拟合参数在CONF.cfg-TargetCircle_Conf-NozzleCircle
-    """
+class Target_slider(Target):
     def __init__(self, cfg):
-        super(Target_nozzle, self).__init__(
-            cfg=cfg, tar_name='Nozzle', roi_names=['LeftROI', 'BottomROI'])
+        """滑板液压缸安装与卸载的目标文件
+        1.默认使用水口安装版Left ROI(提供X、和eular_X)进行安装，
+        2.默认使用Left ROI 和自身ROI(提供X和eular_X)进行卸载
+        3.最终计算的Y轴使用拟合圆进行修正，拟合参数在CONF.cfg - TargetCircle_Conf - SliderCircle
+        """
+        super(Target_slider, self).__init__(
+            cfg=cfg, tar_name='Slider', roi_names=['LeftROI', 'RightROI'])
+
 
 
     def target_estimation(self, mtx: np.ndarray,
@@ -24,7 +24,7 @@ class Target_nozzle(Target):
         :param rects: 字典
         :return: X Y Z eular_x eular_y eular_z
         """
-        tar2board = self.cfg['Tar2Board_Conf']['LeftROINozzleTar2Board']
+        tar2board = self.cfg['Tar2Board_Conf']['LeftROISliderTar2Board']
         xyzrpy = None
         if state == 'Install' and 'LeftROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
@@ -33,7 +33,7 @@ class Target_nozzle(Target):
             xyzrpy[3] += 180.0 - 45.0 # 角度经验修正
             xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
             xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
-        elif state == 'Remove' and 'LeftROI' in rects.keys() and 'BottomROI' in rects.keys():
+        elif state == 'Remove' and 'LeftROI' in rects.keys() and 'RightROI' in rects.keys():
             """
             rect[0]: 左标定板, 提供x, y方向
             rect[1]: 下标定板，提供角度

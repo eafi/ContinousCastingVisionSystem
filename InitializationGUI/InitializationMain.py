@@ -7,6 +7,7 @@ Email: imeafi@gmail.com
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QHBoxLayout, QVBoxLayout, QMessageBox
 from Modules.parse import CfgManager
+from InitializationGUI.TargetCircleWidget import TargetCircle
 from InitializationCameraWidget import InitializationCameraWidget
 from CalibrateWidget import Calibration
 from harvesters.core import Harvester
@@ -26,12 +27,13 @@ class MainGUI(QWidget):
         self.btn1.setFixedSize(120, 80)
         self.btn2 = QPushButton(self.tr('Hand-Eye\nCalibration'))  # 手眼标定
         self.btn2.setFixedSize(120, 80)
-        #self.btn3 = QPushButton(self.tr('Camera\nCalibration'))  # 相机标定
-        #self.btn3.setFixedSize(120, 80)
+        self.btn3 = QPushButton(self.tr('Target Circle\n Adjustment'))  # 目标物体的拟合圆调整
+        self.btn3.setFixedSize(120, 80)
 
         btnLayout = QHBoxLayout()
         btnLayout.addWidget(self.btn1)
         btnLayout.addWidget(self.btn2)
+        btnLayout.addWidget(self.btn3)
 
         #============== Camera =========================
         self.h = Harvester()
@@ -76,6 +78,7 @@ class MainGUI(QWidget):
 
         #self.btn2.clicked.connect(self.calibration.slot_init)
         self.btn2.clicked.connect(self.slot_calibrate_btn)
+        self.btn3.clicked.connect(self.slot_target_circle_btn)
 
 
     def slot_calibrate_btn(self):
@@ -94,6 +97,10 @@ class MainGUI(QWidget):
         if ret == QMessageBox.Yes:
             self.calibration.calibrateWidget.show()
             self.calibration.start()
+
+    def slot_target_circle_btn(self):
+        self.target_circle_widget = TargetCircle(self.cfgManager.cfg)
+        self.target_circle_widget.show()
 
 
 if __name__ == '__main__':
