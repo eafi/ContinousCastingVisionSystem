@@ -9,7 +9,7 @@ class Target_slider(Target):
         3.最终计算的Y轴使用拟合圆进行修正，拟合参数在CONF.cfg - TargetCircle_Conf - SliderCircle
         """
         super(Target_slider, self).__init__(
-            cfg=cfg, tar_name='Slider', roi_names=['LeftROI', 'RightROI'])
+            cfg=cfg, tar_name='Slider', roi_names=['RightROI', 'TopROI'])
 
 
 
@@ -24,27 +24,28 @@ class Target_slider(Target):
         :param rects: 字典
         :return: X Y Z eular_x eular_y eular_z
         """
-        tar2board = self.cfg['Tar2Board_Conf']['LeftROISliderTar2Board']
+        tar2board = self.cfg['Tar2Board_Conf']['RightROISliderTar2Board']
         xyzrpy = None
-        if state == 'Install' and 'LeftROI' in rects.keys():
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
+        if state == 'Install' and 'RightROI' in rects.keys():
+            board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[3] += 180.0 - 45.0 # 角度经验修正
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
+            xyzrpy[3] += 140.0 # 角度经验修正
             xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
-        elif state == 'Remove' and 'LeftROI' in rects.keys() and 'RightROI' in rects.keys():
+            xyzrpy[0] += 21.306
+            xyzrpy[2] += 60
+
+        elif state == 'Remove' and 'TopROI' in rects.keys() and 'RightROI' in rects.keys():
             """
             rect[0]: 左标定板, 提供x, y方向
             rect[1]: 下标定板，提供角度
             """
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
+            board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
             xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
 
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['BottomROI']) # 下标定板
+            board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI']) # 提供角度`
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             xyzrpy[3] = trans2xyzrpy(tar2base)[3] + 180.0 # 角度正对下标定板
         return xyzrpy
@@ -60,7 +61,7 @@ class Target_slider(Target):
         :param rc:
         :return:
         """
-        circle_conf = self.cfg['TargetCircle_Conf']['NozzleCircle']
+        circle_conf = self.cfg['TargetCircle_Conf'][f'{self.tar_name}Circle']
         xc = circle_conf[0]
         yc = circle_conf[1]
         rc = circle_conf[2]

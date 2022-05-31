@@ -344,12 +344,15 @@ def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99
 if __name__ == '__main__':
     print('hello')
     #img_path = 'C:/Users/xjtu/Downloads/Compressed/LeftCamera-228'
-    src_img = 'C:/Users/001/Desktop/imgs/-1.bmp'
+    src_img = 'C:/Users/001/Desktop/imgs/0.bmp'
     img_files = [src_img]
     for img in img_files:
         img = cv2.imread(img, cv2.IMREAD_GRAYSCALE)
-
+        cv2.imshow('d', img)
+        cv2.waitKey(0)
+        img = img[700:700+768, 300:300+768]
         cv2.imshow('img', img)
+        cv2.waitKey(0)
         bgr_src = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
         rect = search(src_img=img, roi_size=0)
         print(rect)

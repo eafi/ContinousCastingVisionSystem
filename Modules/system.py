@@ -188,11 +188,12 @@ class CoreSystem(QThread):
             # DEBUG
 
             self.left_cam = self.h.create_image_acquirer(serial_number='S1101390')
-            self.right_cam = self.h.create_image_acquirer(serial_number='S1101391')
+            #self.right_cam = self.h.create_image_acquirer(serial_number='S1101391')
+            self.right_cam = self.left_cam
             #self.left_cam = self.h.create_image_acquirer(0)
             #self.right_cam = self.h.create_image_acquirer(1)
             self.left_cam.start()
-            self.right_cam.start()
+            #self.right_cam.start()
 
             self.left_cam_mtx = self.cfg['Calibration_Conf']['LeftCameraMatrix']
             self.left_cam_dist = self.cfg['Calibration_Conf']['LeftCameraDist']
