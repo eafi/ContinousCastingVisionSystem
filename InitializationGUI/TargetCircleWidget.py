@@ -52,19 +52,28 @@ class TargetCircle(QWidget):
         cxcycr = self.cfg_target_circle_dict[self.combox.currentText()]
         cxcy = cxcycr[:2]
         print(pts_xy - cxcy)
-        new_r = np.mean(np.linalg.norm(pts_xy - cxcy, ord=2, axis=0))
+        rs = []
+        for pt_xy in pts_xy:
+            x, y = pt_xy
+            cx, cy = cxcy
+            new_r = np.sqrt((x-cx)*(x-cx) + (y-cy)*(y-cy))
+            rs.append(new_r)
+        print(rs)
+        avg_r = np.mean(rs)
+
         ret = QMessageBox.warning(self, 'Warning!', f'The circle radius of'
                                                     f' {self.combox.currentText()}'
                                                     f'will be changed from '
                                                     f'{cxcycr[-1]} mm to '
-                                                    f'{new_r} mm!', QMessageBox.No, QMessageBox.Yes)
+                                                    f'{rs} mm,\n'
+                                                    f'avg:{avg_r} mm', QMessageBox.No, QMessageBox.Yes)
         if ret == QMessageBox.Yes:
             # 覆盖半径
-            new_str_cxcycr = '{:.4f},{:.4f},{:.4f}'.format(cxcy[0], cxcy[1],new_r)
+            new_str_cxcycr = '{:.4f},{:.4f},{:.4f}'.format(cxcy[0], cxcy[1], avg_r)
             write_couple_cfg((self.combox.currentText(), new_str_cxcycr), '../CONF.cfg')
             # 刷新当前内存中的cfg，用于界面显示
             new_cxcycr = cxcy
-            new_cxcycr.append(new_r)
+            new_cxcycr.append(avg_r)
             self.cfg['TargetCircle_Conf'][self.combox.currentText()] = new_cxcycr
             self.show_xyr()
             print('Done!')
@@ -89,7 +98,7 @@ if __name__ == '__main__':
         'TargetCircle_Conf':
             {
                 'NozzleCircle':'10,10,10',
-                'PowerEndCircle': '-120,11230,10'
+                'PowerEndCircle': '-173.79198, -5005.76502,10'
             }
     }
     d = cfg['TargetCircle_Conf']

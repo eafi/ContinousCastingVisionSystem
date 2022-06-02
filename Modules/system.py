@@ -241,11 +241,12 @@ class CoreSystem(QThread):
         :param datalst:
         :return:
         """
-        if 1 <= state <= 7:
-            if self.core_sys_state != state:
-                self.core_sys_state = state
-            #self.core_sys_state = 2
-            print(state)
+        #if 1 <= state <= 7:
+        #    if self.core_sys_state != state:
+        #        self.core_sys_state = state
+        #    #self.core_sys_state = 2
+        #    print(state)
+        self.core_sys_state = 2
 
     def detect_res_reader(self):
         """

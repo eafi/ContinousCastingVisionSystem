@@ -25,15 +25,15 @@ class Target_slider(Target):
         :return: X Y Z eular_x eular_y eular_z
         """
         tar2board = self.cfg['Tar2Board_Conf']['RightROISliderTar2Board']
-        xyzrpy = None
         if state == 'Install' and 'RightROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[3] += 140.0 # 角度经验修正
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
-            xyzrpy[0] += 21.306
-            xyzrpy[2] += 60
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(
+                Dx=-10,
+                Dy='Circle',
+                Dz=-80,
+                Dalpha=140.0-1.0)
 
         elif state == 'Remove' and 'TopROI' in rects.keys() and 'RightROI' in rects.keys():
             """
@@ -42,28 +42,13 @@ class Target_slider(Target):
             """
             board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            #xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
 
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI']) # 提供角度`
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy[3] = trans2xyzrpy(tar2base)[3] + 180.0 # 角度正对下标定板
-        return xyzrpy
+            #xyzrpy[3] = trans2xyzrpy(tar2base)[3] + 180.0 # 角度正对下标定板
+        return self.xyzrpy
 
 
-    def intersection(self, x):
-        """
-        水口安装板，水口安装末端位在旋转实验台圆心位置所绘制的圆形。
-        利用该先验圆形提供机器人基坐标系下y轴深度补偿
-        :param x: 由PnP计算得到的机器人基坐标系下的x坐标
-        :param xc:
-        :param yc:
-        :param rc:
-        :return:
-        """
-        circle_conf = self.cfg['TargetCircle_Conf'][f'{self.tar_name}Circle']
-        xc = circle_conf[0]
-        yc = circle_conf[1]
-        rc = circle_conf[2]
-        return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
 

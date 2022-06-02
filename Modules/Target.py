@@ -22,6 +22,7 @@ class Target:
         self.tar_name = tar_name # 工件名字
         self.roi_names = roi_names
         self.is_installed_flag = False
+        self.xyzrpy = None
 
     def done(self):
         """
@@ -62,3 +63,37 @@ class Target:
         :return:
         """
         raise NotImplementedError
+
+    def intersection(self, x):
+        """
+        水口安装板，水口安装末端位在旋转实验台圆心位置所绘制的圆形。
+        利用该先验圆形提供机器人基坐标系下y轴深度补偿
+        :param x: 由PnP计算得到的机器人基坐标系下的x坐标
+        :param xc:
+        :param yc:
+        :param rc:
+        :return:
+        """
+        circle_conf = self.cfg['TargetCircle_Conf'][f'{self.tar_name}Circle']
+        xc = circle_conf[0]
+        yc = circle_conf[1]
+        rc = circle_conf[2]
+        return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
+
+    def compensation(self, Dx=0, Dy=0, Dz=0, Dalpha=0, Dbeta=0, Dgamma=0):
+        print('Before Compensation:', self.xyzrpy)
+        assert isinstance(Dx, (float, int))
+        assert isinstance(Dy, (float, str, int))
+        assert isinstance(Dz, (float, int))
+        assert isinstance(Dalpha, (float, int))
+        assert isinstance(Dbeta, (float, int))
+        assert isinstance(Dgamma, (float, int))
+        self.xyzrpy[0] += Dx
+        if Dy is 'Circle':
+            self.xyzrpy[1] = self.intersection(self.xyzrpy[0]) # 环形修正
+        else:
+            self.xyzrpy[1] += Dy
+        self.xyzrpy[2] += Dz
+        self.xyzrpy[3] += Dalpha
+        self.xyzrpy[4] += Dbeta
+        self.xyzrpy[5] += Dgamma

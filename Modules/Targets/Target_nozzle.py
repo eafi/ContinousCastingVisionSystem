@@ -29,10 +29,8 @@ class Target_nozzle(Target):
         if state == 'Install' and 'LeftROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[3] += 180.0 - 45.0 # 角度经验修正
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(Dx=-10.08, Dy='Circle', Dalpha=180.0-45.0)
         elif state == 'Remove' and 'LeftROI' in rects.keys() and 'BottomROI' in rects.keys():
             """
             rect[0]: 左标定板, 提供x, y方向
@@ -40,29 +38,11 @@ class Target_nozzle(Target):
             """
             board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(Dx=-10.08, Dy='Circle')
 
             board2cam = self.transform_board_2_camera(mtx, dist, rects['BottomROI']) # 下标定板
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy[3] = trans2xyzrpy(tar2base)[3] + 180.0 # 角度正对下标定板
-        return xyzrpy
-
-
-    def intersection(self, x):
-        """
-        水口安装板，水口安装末端位在旋转实验台圆心位置所绘制的圆形。
-        利用该先验圆形提供机器人基坐标系下y轴深度补偿
-        :param x: 由PnP计算得到的机器人基坐标系下的x坐标
-        :param xc:
-        :param yc:
-        :param rc:
-        :return:
-        """
-        circle_conf = self.cfg['TargetCircle_Conf']['NozzleCircle']
-        xc = circle_conf[0]
-        yc = circle_conf[1]
-        rc = circle_conf[2]
-        return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
+            self.compensation(Dalpha=trans2xyzrpy(tar2base)[3]+180.0)
+        return self.xyzrpy
 

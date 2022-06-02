@@ -25,14 +25,11 @@ class Target_powerend(Target):
         :return: X Y Z eular_x eular_y eular_z
         """
         tar2board = self.cfg['Tar2Board_Conf']['TopROIPowerEndTar2Board']
-        xyzrpy = None
         if state == 'Install' and 'TopROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[3] += 180.0 - 45.0 # 角度经验修正
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(Dx=-7.83, Dy='Circle', Dalpha=180-30-0.4)
         elif state == 'Remove' and 'TopROI' in rects.keys():
             """
             rect[0]: 左标定板, 提供x, y方向
@@ -40,26 +37,8 @@ class Target_powerend(Target):
             """
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            xyzrpy = trans2xyzrpy(tar2base)
-            xyzrpy[3] += 180.0 # 角度经验修正
-            xyzrpy[0] -= 10.08 # 末端安装位向水口安装板法兰中心x向经验修正量
-            xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
-        return xyzrpy
+            self.xyzrpy = trans2xyzrpy(tar2base)
+        return self.xyzrpy
 
 
-    def intersection(self, x):
-        """
-        水口安装板，水口安装末端位在旋转实验台圆心位置所绘制的圆形。
-        利用该先验圆形提供机器人基坐标系下y轴深度补偿
-        :param x: 由PnP计算得到的机器人基坐标系下的x坐标
-        :param xc:
-        :param yc:
-        :param rc:
-        :return:
-        """
-        circle_conf = self.cfg['TargetCircle_Conf']['NozzleCircle']
-        xc = circle_conf[0]
-        yc = circle_conf[1]
-        rc = circle_conf[2]
-        return np.sqrt(rc*rc - (xc-x)*(xc-x)) + yc
 
