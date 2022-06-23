@@ -70,15 +70,15 @@ class CoreSystem(QThread):
                 except Exception as e:
                     LOG(log_types.FAIL, self.tr('CoreSystem initialization fail : ' + e.args[0]))
             elif self.core_sys_state == 1:  # 初始化成功状态，等待TCP请求
-                self.roi_board_trackers = {}  # 清空ROIname - board tracker 字典
-                self.stable_rects = {} # 清空 ROIName - stable_rect 字典
                 self.current_target = None
+                self.roi_board_trackers.clear()
+                self.stable_rects.clear()
                 # PLC要求：已经完成动作，清空该系统状态，清空发送的坐标
                 self.robot.reset_system_mod()
                 self.robot.reset_move()
+                self.robot.set_system_mode(1)
                 self.clear_imgs_buffer() # 清空还未计算完成的cache图片
                 state = None
-                continue
                 #self.core_sys_state = 2
                 ## 相机状态与核心检测器的绑定: 每次相机状态刷新时，同时调用检测器
             #####################################################################################################

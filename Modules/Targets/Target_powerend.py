@@ -31,12 +31,12 @@ class Target_powerend(Target):
         """
         super(Target_powerend, self).target_estimation(mtx, dist, cam2base, rects, state)
         tar2board = self.cfg['Tar2Board_Conf']['TopROIPowerEndTar2Board']
-        if state == 'Install' and 'TopROI' in rects.keys():
+        if state == 'Install' and self.needed_roi_names('TopROI'):
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
             self.compensation(Dx=-7.83, Dy='Circle', Dalpha=180-30-0.4)
-        elif state == 'Remove' and 'TopROI' in rects.keys():
+        elif state == 'Remove' and self.needed_roi_names('TopROI'):
             """
             rect[0]: 左标定板, 提供x, y方向
             rect[1]: 下标定板，提供角度
@@ -44,6 +44,7 @@ class Target_powerend(Target):
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(Dx=-7.83, Dy='Circle', Dalpha=180 - 30 - 0.4)
         return self.xyzrpy
 
 

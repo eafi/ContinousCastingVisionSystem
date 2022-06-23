@@ -17,7 +17,7 @@ class Target_nozzle(Target):
         if state == 'Install':
             return ['LeftROI']
         elif state == 'Remove':
-            return ['LeftROI', 'BottomROI']
+            return ['BottomROI']
 
 
 
@@ -33,25 +33,17 @@ class Target_nozzle(Target):
         :return: X Y Z eular_x eular_y eular_z
         """
         super(Target_nozzle, self).target_estimation(mtx, dist, cam2base, rects, state)
-        tar2board = self.cfg['Tar2Board_Conf']['LeftROINozzleTar2Board']
-        self.state = state
-        if state == 'Install' and 'LeftROI' in rects.keys():
+        if state == 'Install' and self.needed_roi_names('LeftROI'):
+            tar2board = self.cfg['Tar2Board_Conf']['LeftROINozzleTar2Board']
             board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
             self.compensation(Dx=-2.35, Dy='Circle', Dalpha=-2.63)
-        elif state == 'Remove' and 'LeftROI' in rects.keys() and 'BottomROI' in rects.keys():
-            """
-            rect[0]: 左标定板, 提供x, y方向
-            rect[1]: 下标定板，提供角度
-            """
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
-            tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            self.xyzrpy = trans2xyzrpy(tar2base)
-            self.compensation(Dx=-10.08, Dy='Circle')
-
+        elif state == 'Remove' and self.needed_roi_names('BottomROI'):
+            tar2board = self.cfg['Tar2Board_Conf']['BottomROINozzleTar2Board']
             board2cam = self.transform_board_2_camera(mtx, dist, rects['BottomROI']) # 下标定板
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            self.compensation(Dalpha=trans2xyzrpy(tar2base)[3]+180.0)
+            self.xyzrpy = trans2xyzrpy(tar2base)
+            self.compensation(Dx=-6, Dy='Circle')
         return self.xyzrpy
 

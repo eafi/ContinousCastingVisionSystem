@@ -30,7 +30,7 @@ class Target_slider(Target):
         :return: X Y Z eular_x eular_y eular_z
         """
         super(Target_slider, self).target_estimation(mtx, dist, cam2base, rects, state)
-        if state == 'Install' and 'RightROI' in rects.keys():
+        if state == 'Install' and self.needed_roi_names('RightROI'):
             tar2board = self.cfg['Tar2Board_Conf']['RightROISliderTar2Board']
             board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
@@ -41,7 +41,7 @@ class Target_slider(Target):
                 Dz=0,
                 Dalpha=180+60-90-10-1.86)
 
-        elif state == 'Remove' and 'AppendixROI' in rects.keys():
+        elif state == 'Remove' and self.needed_roi_names('AppendixROI'):
             tar2board = self.cfg['Tar2Board_Conf']['AppendixROISliderTar2Board']
             board2cam = self.transform_board_2_camera(mtx, dist, rects['AppendixROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)

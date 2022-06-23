@@ -72,6 +72,8 @@ class Target:
         :return:
         """
         self.state = state
+        self.rects = rects
+        self.xyzrpy = None
 
     def intersection(self, x, state=''):
         """
@@ -106,3 +108,16 @@ class Target:
         self.xyzrpy[3] += Dalpha
         self.xyzrpy[4] += Dbeta
         self.xyzrpy[5] += Dgamma
+
+
+    def needed_roi_names(self, roi_names):
+        if isinstance(roi_names, str):
+            roi_names = [roi_names]
+        assert isinstance(roi_names, list)
+        for roi_name in roi_names:
+            if roi_name not in self.rects.keys():
+                return False
+        return True
+
+
+

@@ -72,6 +72,8 @@ class Robot(QThread):
         :param state:
         :return:
         """
+        for i in range(1, 8):
+            self.sendCtlBit &= ~self.cfg['Network_Conf'][f'NetworkState{state}']
         if 1 <= state <= 7:
             self.sendCtlBit |= self.cfg['Network_Conf'][f'NetworkState{state}']
 
@@ -139,7 +141,6 @@ class Robot(QThread):
         #if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
         #    return
         self.recCtlBit = ctl
-        print('dfsf', ctl)
         self.recData = data
         self.recResBit = res
         # =================== 核心计算状态切换和请求指令 ==================== #
