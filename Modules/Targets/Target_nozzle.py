@@ -10,7 +10,15 @@ class Target_nozzle(Target):
     """
     def __init__(self, cfg):
         super(Target_nozzle, self).__init__(
-            cfg=cfg, tar_name='Nozzle', roi_names=['LeftROI', 'BottomROI'])
+            cfg=cfg, tar_name='Nozzle')
+
+
+    def get_current_valid_roi_names(self, state):
+        if state == 'Install':
+            return ['LeftROI']
+        elif state == 'Remove':
+            return ['LeftROI', 'BottomROI']
+
 
 
     def target_estimation(self, mtx: np.ndarray,
@@ -24,13 +32,14 @@ class Target_nozzle(Target):
         :param rects: 字典
         :return: X Y Z eular_x eular_y eular_z
         """
+        super(Target_nozzle, self).target_estimation(mtx, dist, cam2base, rects, state)
         tar2board = self.cfg['Tar2Board_Conf']['LeftROINozzleTar2Board']
-        xyzrpy = None
+        self.state = state
         if state == 'Install' and 'LeftROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['LeftROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
-            self.compensation(Dx=-10.08, Dy='Circle', Dalpha=180.0-45.0)
+            self.compensation(Dx=-2.35, Dy='Circle', Dalpha=-2.63)
         elif state == 'Remove' and 'LeftROI' in rects.keys() and 'BottomROI' in rects.keys():
             """
             rect[0]: 左标定板, 提供x, y方向

@@ -168,7 +168,7 @@ def search_rect(points, img, epsilon_k=0.01, epsilon_dst=15):
 
 
 def search(src_img,  roi_size=512, board_size_range=[100,200,5], kernel_size=(99, 99), outer_diameter_range=(30, 99), ring_width_range=(5, 8), ring_threshold=[0.6,0.9,0.05],
-           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.3, epsilon_dst=30):
+           area_threshold=(2,1000), pts_type='avg', epsilon_k=0.15, epsilon_dst=30):
     """
     先从src_img找出ROI区域(search_roi_center), 然后在ROI区域找到ring(search_rings), 最后从可能的圆环圆心位置
     得到精确的4个圆心坐标(search_4_points)

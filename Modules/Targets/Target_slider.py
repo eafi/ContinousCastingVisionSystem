@@ -9,8 +9,13 @@ class Target_slider(Target):
         3.最终计算的Y轴使用拟合圆进行修正，拟合参数在CONF.cfg - TargetCircle_Conf - SliderCircle
         """
         super(Target_slider, self).__init__(
-            cfg=cfg, tar_name='Slider', roi_names=['RightROI', 'TopROI'])
+            cfg=cfg, tar_name='Slider')
 
+    def get_current_valid_roi_names(self, state):
+        if state == 'Install':
+            return ['RightROI']
+        elif state == 'Remove':
+            return ['AppendixROI']
 
 
     def target_estimation(self, mtx: np.ndarray,
@@ -24,30 +29,24 @@ class Target_slider(Target):
         :param rects: 字典
         :return: X Y Z eular_x eular_y eular_z
         """
-        tar2board = self.cfg['Tar2Board_Conf']['RightROISliderTar2Board']
+        super(Target_slider, self).target_estimation(mtx, dist, cam2base, rects, state)
         if state == 'Install' and 'RightROI' in rects.keys():
+            tar2board = self.cfg['Tar2Board_Conf']['RightROISliderTar2Board']
             board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
             self.compensation(
-                Dx=-10,
+                Dx=1.4,
                 Dy='Circle',
-                Dz=-80,
-                Dalpha=140.0-1.0)
+                Dz=0,
+                Dalpha=180+60-90-10-1.86)
 
-        elif state == 'Remove' and 'TopROI' in rects.keys() and 'RightROI' in rects.keys():
-            """
-            rect[0]: 左标定板, 提供x, y方向
-            rect[1]: 下标定板，提供角度
-            """
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['RightROI'])
+        elif state == 'Remove' and 'AppendixROI' in rects.keys():
+            tar2board = self.cfg['Tar2Board_Conf']['AppendixROISliderTar2Board']
+            board2cam = self.transform_board_2_camera(mtx, dist, rects['AppendixROI'])
             tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
             self.xyzrpy = trans2xyzrpy(tar2base)
-            #xyzrpy[1] = self.intersection(xyzrpy[0]) # 环形修正
-
-            board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI']) # 提供角度`
-            tar2base = self.transform_target_2_base(cam2base, board2cam, tar2board)
-            #xyzrpy[3] = trans2xyzrpy(tar2base)[3] + 180.0 # 角度正对下标定板
+            self.compensation(Dx=-5, Dy='Circle', Dalpha=180-90+3)
         return self.xyzrpy
 
 

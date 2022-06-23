@@ -10,7 +10,7 @@ class Target:
     在coreSystem中，需要注册新目标，并叫目标加入指定的网络通讯State中。
     网络state的具体含义已经被预定义，并在CONF.cfg文件
     """
-    def __init__(self, cfg, tar_name, roi_names):
+    def __init__(self, cfg, tar_name):
         """
 
         :param cfg:
@@ -20,9 +20,9 @@ class Target:
         assert isinstance(tar_name, str)
         self.cfg = cfg
         self.tar_name = tar_name # 工件名字
-        self.roi_names = roi_names
         self.is_installed_flag = False
         self.xyzrpy = None
+        self.state = 'Install'
 
     def done(self):
         """
@@ -30,6 +30,15 @@ class Target:
         :return:
         """
         self.is_installed_flag = ~self.is_installed_flag
+
+
+    def get_current_valid_roi_names(self, state):
+        """
+        安装或卸载时，target所需求的目标可能是不同的. 本函数根据安装或卸载，返回roi names.
+        注意：返回必须为列表，且返回的内容必须为有意义的ROI, 比如 ['LeftROI']
+        :param state: 目标状态
+        """
+        raise NotImplementedError
 
 
     def is_installed(self):
@@ -62,9 +71,9 @@ class Target:
         :param state: Install or Remove
         :return:
         """
-        raise NotImplementedError
+        self.state = state
 
-    def intersection(self, x):
+    def intersection(self, x, state=''):
         """
         水口安装板，水口安装末端位在旋转实验台圆心位置所绘制的圆形。
         利用该先验圆形提供机器人基坐标系下y轴深度补偿
@@ -74,7 +83,7 @@ class Target:
         :param rc:
         :return:
         """
-        circle_conf = self.cfg['TargetCircle_Conf'][f'{self.tar_name}Circle']
+        circle_conf = self.cfg['TargetCircle_Conf'][f'{self.state}{self.tar_name}Circle']
         xc = circle_conf[0]
         yc = circle_conf[1]
         rc = circle_conf[2]
@@ -89,7 +98,7 @@ class Target:
         assert isinstance(Dbeta, (float, int))
         assert isinstance(Dgamma, (float, int))
         self.xyzrpy[0] += Dx
-        if Dy is 'Circle':
+        if Dy == 'Circle':
             self.xyzrpy[1] = self.intersection(self.xyzrpy[0]) # 环形修正
         else:
             self.xyzrpy[1] += Dy

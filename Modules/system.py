@@ -76,6 +76,7 @@ class CoreSystem(QThread):
                 # PLC要求：已经完成动作，清空该系统状态，清空发送的坐标
                 self.robot.reset_system_mod()
                 self.robot.reset_move()
+                self.clear_imgs_buffer() # 清空还未计算完成的cache图片
                 state = None
                 continue
                 #self.core_sys_state = 2
@@ -107,11 +108,33 @@ class CoreSystem(QThread):
                 self.detect_enable = True
                 self.current_target = self.target_nozzle
                 state = 'Remove'
-            print('core sys: in ', self.core_sys_state)
+            LOG(log_types.OK, f'Core System in State {self.core_sys_state}')
             sleep(2)
             self.request_wait(self.current_target, state)
-            self.detect_img_prompt()
+            self.detect_img_prompt(state)
             self.detect_res_reader()
+
+
+    def clear_imgs_buffer(self):
+        """
+        在必要时，清空.cache文件目录下的所有图像和npy文件。 比如已经成功检测并发送目标后.
+        """
+        for file_path, _, file_name in os.walk(self.cache_path):
+            for name in file_name:
+                os.remove(os.path.join(file_path, name))
+
+
+    def is_roi_names_valid(self, roi_names):
+        """
+        目标targets的定义文件中所用roi names应该为CONF.cfg文件所提供roi names子集.
+        """
+        all_valid_roi_names = self.cfg['ROIs_Conf'].keys()
+        all_valid_roi_names = [x.split('Camera')[1] for x in all_valid_roi_names]
+        for roi_name in roi_names:
+            if roi_name not in all_valid_roi_names:
+                return False
+        return True
+
 
     def request_wait(self, target, state):
         """
@@ -124,7 +147,10 @@ class CoreSystem(QThread):
         """
         if target is None or state is None:
             return
-        roi_names = target.roi_names
+        roi_names = target.get_current_valid_roi_names(state)
+        if not self.is_roi_names_valid(roi_names):
+            LOG(log_types.FAIL, 'Invalid ROI names.')
+            raise RuntimeError
         if not isinstance(roi_names, list):
             roi_names = [roi_names]
         for roi_name in roi_names:
@@ -241,12 +267,10 @@ class CoreSystem(QThread):
         :param datalst:
         :return:
         """
-        #if 1 <= state <= 7:
-        #    if self.core_sys_state != state:
-        #        self.core_sys_state = state
-        #    #self.core_sys_state = 2
-        #    print(state)
-        self.core_sys_state = 2
+        if 1 <= state <= 7:
+           if self.core_sys_state != state:
+               self.core_sys_state = state
+           #self.core_sys_state = 2
 
     def detect_res_reader(self):
         """
@@ -272,7 +296,7 @@ class CoreSystem(QThread):
 
             self.targetFoundSignal.emit(roi_name, rect)  # 与CameraWidget有关，用于绘制Target
 
-    def detect_img_prompt(self):
+    def detect_img_prompt(self, state):
         """
         使用第一种方法进行核心图像检测.
         本方法一旦相机发送OK状态后就开始不断调用: 在main.py中已经与相机Status信号发送绑定.
@@ -282,7 +306,11 @@ class CoreSystem(QThread):
         if self.detect_enable:
             if isinstance(self.left_cam, CoreSystemCameraWidget):
                 img = self.left_cam.im_np
-                for roi_name in self.current_target.roi_names:
+                roi_names = self.current_target.get_current_valid_roi_names(state)
+                if not self.is_roi_names_valid(roi_names):
+                    LOG(log_types.FAIL, 'Invalid ROI names.')
+                    raise RuntimeError
+                for roi_name in roi_names:
                     roi = self.cfg['ROIs_Conf']['LeftCamera'+roi_name]  # 提取当前系统阶段所需要的ROI区域
                     roi_img = img[roi[1]:roi[1] + roi[3], roi[0]:roi[0] + roi[2]]
                     cv2.imwrite(f'{self.cache_path}/LeftCamera{roi_name}-{time.time()}.bmp', roi_img)

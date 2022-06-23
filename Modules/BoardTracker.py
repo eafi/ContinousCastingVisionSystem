@@ -27,7 +27,7 @@ class BoardTracker(QObject):
         :param rect: 第一次检测到的rect，用于判断机械臂是否在运动
         :param roi_name: e.g. LeftCameraLeftROI,将会根据左右相机读取指定相机参数、手眼参数
         """
-        self.rects = deque(maxlen=5)
+        self.rects = deque(maxlen=3)
         self.rects.append(rect)
         self.isStable = False
         self.roi_name = roi_name
@@ -52,7 +52,6 @@ class BoardTracker(QObject):
 
     def fetch_stable_rect(self):
         if self.isStable:
-            print('fetch ok.')
             return np.mean(self.rects, axis=0)
         # 标定板正在运动，不能返回
         else:

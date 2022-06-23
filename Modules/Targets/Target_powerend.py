@@ -10,7 +10,12 @@ class Target_powerend(Target):
     """
     def __init__(self, cfg):
         super(Target_powerend, self).__init__(
-            cfg=cfg, tar_name='PowerEnd', roi_names=['TopROI'])
+            cfg=cfg, tar_name='PowerEnd')
+
+
+    def get_current_valid_roi_names(self, state):
+        if state == 'Install' or state == 'Remove':
+            return ['TopROI']
 
 
     def target_estimation(self, mtx: np.ndarray,
@@ -24,6 +29,7 @@ class Target_powerend(Target):
         :param rects: 字典
         :return: X Y Z eular_x eular_y eular_z
         """
+        super(Target_powerend, self).target_estimation(mtx, dist, cam2base, rects, state)
         tar2board = self.cfg['Tar2Board_Conf']['TopROIPowerEndTar2Board']
         if state == 'Install' and 'TopROI' in rects.keys():
             board2cam = self.transform_board_2_camera(mtx, dist, rects['TopROI'])

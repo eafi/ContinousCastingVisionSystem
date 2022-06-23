@@ -135,11 +135,11 @@ class Robot(QThread):
         :return:
         """
         # 重复指令检查
-        #print('dfsf', ctl)
 
         #if ctl == self.recCtlBit and data == self.recData and res == self.recResBit:
         #    return
         self.recCtlBit = ctl
+        print('dfsf', ctl)
         self.recData = data
         self.recResBit = res
         # =================== 核心计算状态切换和请求指令 ==================== #
